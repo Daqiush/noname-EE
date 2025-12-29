@@ -35,6 +35,8 @@ window.noname_package = {
 		//DIY系列
 		diy: "DIY",
 		key: "Key",
+		//黄金国战
+		ee: "黄金国战",
 	},
 	card: {
 		standard: "标准",
@@ -55,6 +57,7 @@ window.noname_package = {
 	mode: {
 		identity: "身份",
 		guozhan: "国战",
+		guozhan_ee: "黄金国战",
 		versus: "对决",
 		connect: "联机",
 		boss: "挑战",
