@@ -1,14 +1,6 @@
 import { Character } from "../../../../noname/library/element/index.js";
 
-import normal from "./normal.js";
-import zhen from "./zhen.js";
-import shi from "./shi.js";
-import bian from "./bian.js";
-import quan from "./quan.js";
-import yingbian from "./yingbian.js";
-import wushuang from "./wushuang.js";
-
-import restCharacter from "./rest.js";
+import test from "./test.js";
 
 /** @type {Record<string, Character>} */
 export const pack = {
@@ -139,16 +131,8 @@ export const pack = {
 		isUnseen: true,
 	}),
 
-	...restCharacter,
-	...normal,
-	...zhen,
-	...shi,
-	...bian,
-	...quan,
-	...yingbian,
-	...wushuang,
+	...test,
 };
 
 export { default as intro } from "./intro.js";
 export { default as sort } from "./sort.js";
-export { default as yingbian } from "./yingbian.js";

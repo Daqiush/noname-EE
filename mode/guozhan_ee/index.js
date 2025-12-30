@@ -2,7 +2,7 @@ import { lib, game, ui, get, ai, _status } from "../../noname.js";
 import { cast } from "../../noname/util/index.js";
 
 import { start, startBefore, onreinit } from "./src/main.js";
-import { pack, intro, sort, yingbian } from "./src/character/index.js";
+import { pack, intro, sort } from "./src/character/index.js";
 import card from "./src/card/index.js";
 import skill from "./src/skill/index.js";
 import translate, { dynamic } from "./src/translate/index.js";
@@ -50,8 +50,6 @@ export default {
 
 	// 特定配置下所需要的内容
 	junList: info.junList,
-	yingbian_guozhan: yingbian,
-	guozhanPile_yingbian: info.pile.yingbian,
 	guozhanPile_old: info.pile.old,
 
 	// 模式自行提供的垫片函数

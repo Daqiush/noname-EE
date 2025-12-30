@@ -585,7 +585,7 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 	});
 
 	/** @type {Record<string, Character>} */
-	const pack = Reflect.get(lib.characterPack, "mode_guozhan");
+	const pack = Reflect.get(lib.characterPack, "mode_guozhan_ee");
 	const characterList = Object.keys(pack).filter(character => {
 		return !character.startsWith("gz_shibing") && !get.is.jun(character) && !lib.config.guozhan_banned?.includes(character);
 	});

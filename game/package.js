@@ -35,8 +35,6 @@ window.noname_package = {
 		//DIY系列
 		diy: "DIY",
 		key: "Key",
-		//黄金国战
-		ee: "黄金国战",
 	},
 	card: {
 		standard: "标准",

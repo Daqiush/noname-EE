@@ -91,7 +91,7 @@ export const start = async (event, trigger, player) => {
 					_status.separatism = true;
 				}
 				// @ts-expect-error 祖宗之法就是这么写的
-				const pack = lib.characterPack.mode_guozhan;
+				const pack = lib.characterPack.mode_guozhan_ee;
 				if (mode == "yingbian") {
 					delete lib.translate.shuiyanqijunx_info_guozhan;
 					// @ts-expect-error 祖宗之法就是这么写的
@@ -156,7 +156,7 @@ export const start = async (event, trigger, player) => {
 				for (const i in pack) {
 					lib.character[i] = pack[i];
 					// @ts-expect-error 祖宗之法就是这么写的
-					lib.characterPack.mode_guozhan[i] = pack[i];
+					lib.characterPack.mode_guozhan_ee[i] = pack[i];
 					if (!lib.translate["#" + i + ":die"] && !lib.character[i].dieAudios?.length) {
 						let list = lib.character?.[i.slice(3)]?.dieAudios;
 						lib.character[i].dieAudios = list?.length ? list : [i.slice(3)];
@@ -313,14 +313,14 @@ export const startBefore = () => {
 	const playback = localStorage.getItem(lib.configprefix + "playback");
 
 	// @ts-expect-error 祖宗之法就是这么写的
-	for (let character in lib.characterPack.mode_guozhan) {
+	for (let character in lib.characterPack.mode_guozhan_ee) {
 		if (!get.config("onlyguozhan") && !playback) {
 			if (lib.character[character.slice(3)]) {
 				continue;
 			}
 		}
 		// @ts-expect-error 祖宗之法就是这么写的
-		lib.character[character] = lib.characterPack.mode_guozhan[character];
+		lib.character[character] = lib.characterPack.mode_guozhan_ee[character];
 		if (!lib.translate["#" + character + ":die"] && !lib.character[character].dieAudios?.length) {
 			let list = lib.character?.[character.slice(3)]?.dieAudios;
 			lib.character[character].dieAudios = list?.length ? list : [character.slice(3)];
@@ -342,7 +342,7 @@ export const startBefore = () => {
 
 export const onreinit = () => {
 	// @ts-expect-error 祖宗之法就是这么写的
-	const pack = lib.characterPack.mode_guozhan;
+	const pack = lib.characterPack.mode_guozhan_ee;
 
 	for (const character in pack) {
 		lib.character[character] = pack[character];
