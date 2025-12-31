@@ -3617,6 +3617,7 @@ export class Create {
 				}
 				if (infoitem[1]) {
 					var double = get.is.double(item, true);
+					var minor = get.is.minor(item, true);
 					if (double) {
 						node.node.group.innerHTML = double.reduce((previousValue, currentValue) => `${previousValue}<div data-nature="${get.groupnature(currentValue)}">${get.translation(currentValue)}</div>`, "");
 						if (double.length > 4) {
@@ -3626,6 +3627,9 @@ export class Create {
 								node.node.group.style.height = "64px";
 							}
 						}
+					} else if (minor) {
+						// minorSecondGroup: 主势力正常显示，次要势力打括号显示
+						node.node.group.innerHTML = `<div data-nature="${get.groupnature(minor[0])}">${get.translation(minor[0])}</div><div data-nature="${get.groupnature(minor[1])}" style="font-size:smaller">(${get.translation(minor[1])})</div>`;
 					} else {
 						node.node.group.innerHTML = `<div>${get.translation(infoitem[1])}</div>`;
 					}

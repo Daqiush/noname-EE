@@ -76,6 +76,16 @@ export class Character {
 	 **/
 	doubleGroup = [];
 	/**
+	 * 【黄金国战】主要的第二势力（与 minorSecondGroup 互斥）
+	 * @type { string|undefined }
+	 **/
+	majorSecondGroup;
+	/**
+	 * 【黄金国战】次要的第二势力（与 majorSecondGroup 互斥）
+	 * @type { string|undefined }
+	 **/
+	minorSecondGroup;
+	/**
 	 * 武将牌是否为minskin
 	 * @type { boolean }
 	 **/
@@ -225,6 +235,8 @@ export class Character {
 		this.dualSideCharacter = void 0;
 		this.img = void 0;
 		this.doubleGroup = [];
+		this.majorSecondGroup = void 0;
+		this.minorSecondGroup = void 0;
 		this.clans = [];
 		this.initFilters = [];
 		this.trashBin = [];

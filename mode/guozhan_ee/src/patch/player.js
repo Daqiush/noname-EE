@@ -583,8 +583,41 @@ export class PlayerGuozhan extends Player {
 		}
 		// @ts-expect-error 类型就是这么写的
 		game.addVideo("showCharacter", this, num);
-		if (this.identity == "unknown" || ((num == 0 || num == 2) && lib.character[this.name1][1] == "ye")) {
-			this.group = this.getGuozhanGroup(num);
+		
+		// 单独明置副将时的特殊处理
+		const isOnlyViceShow = num == 1 && this.isUnseen(0);
+		// 明置主将时，检查是否需要恢复势力（之前只明置了副将）
+		const shouldRestoreMainGroup = (num == 0 || num == 2) && this._viceGroupTemp;
+		
+		if (this.identity == "unknown" || ((num == 0 || num == 2) && lib.character[this.name1][1] == "ye") || shouldRestoreMainGroup) {
+			// 如果是明置主将且之前临时使用了副将势力，恢复主将势力
+			if (shouldRestoreMainGroup) {
+				delete this._viceGroupTemp;
+				this.group = this.getGuozhanGroup(0);
+			} else if (isOnlyViceShow) {
+				// 单独明置副将时，以副将势力为准
+				const viceInfo = get.character(this.name2);
+				const viceGroup = viceInfo?.group;
+				const viceSecondGroup = viceInfo?.majorSecondGroup || viceInfo?.minorSecondGroup;
+				
+				if (viceGroup === "han") {
+					// 副将势力为汉，直接使用汉
+					this.group = "han";
+				} else if (viceSecondGroup) {
+					// 副将有第二势力，使用组合势力（如 wei_shu）
+					// 按字母顺序排列以确保一致性
+					const groups = [viceGroup, viceSecondGroup].sort();
+					this.group = groups.join("_");
+				} else {
+					// 普通单势力副将
+					this.group = viceGroup;
+				}
+				// 标记为临时使用副将势力
+				this._viceGroupTemp = true;
+			} else {
+				this.group = this.getGuozhanGroup(num);
+			}
+			
 			if ((num == 0 || num == 2) && lib.character[this.name1][1] == "ye") {
 				this.identity = "ye";
 				if (!this._ye) {
@@ -805,7 +838,8 @@ export class PlayerGuozhan extends Player {
 			}
 			const group = get.character(name1).group,
 				info = get.character(name2);
-			return info.group == group || (info.doubleGroup && info.doubleGroup.includes(group));
+			// 检查主势力或第二势力是否匹配
+			return info.group == group || info.majorSecondGroup == group || info.minorSecondGroup == group;
 		};
 		if (junFilter(name1, name2)) {
 			return true;

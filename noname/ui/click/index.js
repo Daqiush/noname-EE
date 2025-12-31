@@ -3475,9 +3475,13 @@ export class Click {
 					var characterpinyin = lib.config.show_characternamepinyin == "showCodeIdentifier2" ? name : get.pinyin(charactername);
 					var charactersex = get.translation(nameinfo[0]);
 					const charactergroups = get.is.double(name, true);
+					const characterminor = get.is.minor(name, true);
 					let charactergroup;
 					if (charactergroups) {
 						charactergroup = charactergroups.map(i => get.translation(i)).join("/");
+					} else if (characterminor) {
+						// minorSecondGroup: 主势力/（次要势力）
+						charactergroup = get.translation(characterminor[0]) + "/(" + get.translation(characterminor[1]) + ")";
 					} else {
 						charactergroup = get.translation(nameinfo[1]);
 					}
@@ -3715,7 +3719,8 @@ export class Click {
 						.then(image => characterSexDiv.appendChild(image))
 						.catch(() => (characterSexDiv.innerHTML = get.translation(characterSex)));
 					const characterGroupDiv = ui.create.div(".character-group", characterIntroTable),
-						characterGroups = get.is.double(name, true);
+						characterGroups = get.is.double(name, true),
+						characterMinor = get.is.minor(name, true);
 					if (characterGroups) {
 						Promise.all(
 							characterGroups.map(characterGroup =>
@@ -3755,6 +3760,54 @@ export class Click {
 								characterGroupDiv.appendChild(documentFragment);
 							})
 							.catch(() => (characterGroupDiv.innerHTML = characterGroups.map(characterGroup => get.translation(characterGroup)).join("/")));
+					} else if (characterMinor) {
+						// minorSecondGroup: 主势力图片 + (次要势力图片)
+						const mainGroup = characterMinor[0];
+						const minorGroup = characterMinor[1];
+						// 加载两个势力图片的函数
+						const loadGroupImage = async (groupName) => {
+							const imageName = `group_${groupName}`,
+								information = lib.card[imageName];
+							let src;
+							if (!information) {
+								src = `${lib.assetURL}image/card/${imageName}.png`;
+							} else {
+								const image = information.image;
+								if (!image) {
+									src = `${lib.assetURL}image/card/${imageName}.png`;
+								} else if (image.startsWith("db:")) {
+									src = await game.getDB("image", image.slice(3));
+								} else if (image.startsWith("ext:")) {
+									src = `${lib.assetURL}${image.replace(/^ext:/, "extension/")}`;
+								} else {
+									src = `${lib.assetURL}${image}`;
+								}
+							}
+							return new Promise((resolve, reject) => {
+								const img = new Image();
+								img.onload = () => resolve(img);
+								img.onerror = reject;
+								img.src = src;
+							});
+						};
+						Promise.all([loadGroupImage(mainGroup), loadGroupImage(minorGroup)])
+							.then(([mainImg, minorImg]) => {
+								// 主势力图片
+								characterGroupDiv.appendChild(mainImg);
+								// 左括号
+								const leftParen = document.createElement("span");
+								leftParen.textContent = "(";
+								leftParen.style.cssText = "margin-left: 2px;";
+								characterGroupDiv.appendChild(leftParen);
+								// 次要势力图片（稍小）
+								minorImg.style.cssText = "height: 0.9em; vertical-align: middle;";
+								characterGroupDiv.appendChild(minorImg);
+								// 右括号
+								const rightParen = document.createElement("span");
+								rightParen.textContent = ")";
+								characterGroupDiv.appendChild(rightParen);
+							})
+							.catch(() => (characterGroupDiv.innerHTML = get.translation(mainGroup) + "/(" + get.translation(minorGroup) + ")"));
 					} else {
 						const characterGroup = nameInfo[1];
 						Promise.resolve()

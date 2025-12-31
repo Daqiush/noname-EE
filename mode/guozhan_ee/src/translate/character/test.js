@@ -1,7 +1,7 @@
 export default {
-	gz_daqiush0: "大秋蜀零",
-	gz_daqiush1: "大秋蜀一",
-	gz_daqiush2: "大秋蜀二",
+	gz_daqiush0: "汉大秋蜀零",
+	gz_daqiush1: "魏大秋蜀一",
+	gz_daqiush2: "从魏大秋蜀二",
 	gz_daqiush3: "大秋蜀三",
 	gz_daqiush4: "大秋蜀四",
 	gz_daqiush5: "大秋蜀五",

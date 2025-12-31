@@ -396,36 +396,57 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 			if (lib.character[button.link].hasHiddenSkill) {
 				return false;
 			}
+			// 判断武将是否可作为主将
+			var canBeMain = function (name) {
+				const info = get.character(name);
+				if (!info) return false;
+				// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
+				if (info.majorSecondGroup || info.group === "han") return false;
+				return true;
+			};
+			// 获取武将作为副将时的有效势力列表
+			var getViceGroups = function (name) {
+				const info = get.character(name);
+				if (!info) return [];
+				const groups = [info.group];
+				// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
+				if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
+				if (info.minorSecondGroup) groups.push(info.minorSecondGroup);
+				return groups;
+			};
 			var filterChoice = function (name1, name2) {
 				// @ts-expect-error 祖宗之法就是这么写的
 				if (_status.separatism) {
 					return true;
 				}
-				var group1 = lib.character[name1][1];
-				var group2 = lib.character[name2][1];
+				// name1 为主将，name2 为副将
+				// 检查主将是否可作为主将
+				if (!canBeMain(name1)) return false;
+				var info1 = get.character(name1);
+				var info2 = get.character(name2);
+				if (!info1 || !info2) return false;
+				var group1 = info1.group;
+				var group2 = info2.group;
+				// han 势力作为副将可搭配任何主将
+				if (group2 === "han") return true;
+				// 获取副将的有效势力列表
+				var viceGroups = getViceGroups(name2);
+				// 检查主将势力是否在副将有效势力中
+				if (viceGroups.includes(group1)) return true;
+				// 处理主将的 doubleGroup 情况
 				// @ts-expect-error 祖宗之法就是这么写的
 				var doublex = get.is.double(name1, true);
-				if (doublex) {
-					// @ts-expect-error 祖宗之法就是这么写的
-					var double = get.is.double(name2, true);
-					// @ts-expect-error 祖宗之法就是这么写的
-					if (double) {
-						return doublex.some(group => double.includes(group));
-					}
-					// @ts-expect-error 祖宗之法就是这么写的
-					return doublex.includes(group2) || lib.selectGroup.includes(group2);
-				} else {
-					if (group1 == "ye" || lib.selectGroup.includes(group1)) {
-						return group2 != "ye";
-					}
-					// @ts-expect-error 祖宗之法就是这么写的
-					var double = get.is.double(name2, true);
-					// @ts-expect-error 祖宗之法就是这么写的
-					if (double) {
-						return double.includes(group1);
-					}
-					return group1 == group2 || lib.selectGroup.includes(group2);
+				if (doublex && Array.isArray(doublex)) {
+					return doublex.some(g => viceGroups.includes(g));
 				}
+				// 处理原有的野心家/神等特殊势力
+				if (group1 == "ye" || lib.selectGroup.includes(group1)) {
+					return group2 != "ye";
+				}
+				if (lib.selectGroup.includes(group2)) {
+					return true;
+				}
+				return false;
 			};
 			if (!ui.selected.buttons.length) {
 				return ui.dialog.buttons.some(but => {

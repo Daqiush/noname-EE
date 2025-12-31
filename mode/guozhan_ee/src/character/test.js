@@ -3,11 +3,11 @@ import { Character } from "../../../../noname/library/element/index.js";
 export default {
 	gz_daqiush0: new Character({
 		sex: "male",
-		group: "shu",
+		group: "han",
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush1: new Character({
 		sex: "male",
@@ -15,7 +15,8 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
+		majorSecondGroup: "wei",
 	}),
 	gz_daqiush2: new Character({
 		sex: "male",
@@ -23,7 +24,8 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
+		minorSecondGroup: "wei",
 	}),
 	gz_daqiush3: new Character({
 		sex: "male",
@@ -31,7 +33,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush4: new Character({
 		sex: "male",
@@ -39,7 +41,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush5: new Character({
 		sex: "male",
@@ -47,7 +49,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush6: new Character({
 		sex: "male",
@@ -55,7 +57,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush7: new Character({
 		sex: "male",
@@ -63,7 +65,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush8: new Character({
 		sex: "male",
@@ -71,7 +73,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush9: new Character({
 		sex: "male",
@@ -79,7 +81,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush10: new Character({
 		sex: "male",
@@ -87,7 +89,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush11: new Character({
 		sex: "male",
@@ -95,7 +97,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush12: new Character({
 		sex: "male",
@@ -103,7 +105,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush13: new Character({
 		sex: "male",
@@ -111,7 +113,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush14: new Character({
 		sex: "male",
@@ -119,7 +121,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush15: new Character({
 		sex: "male",
@@ -127,7 +129,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush16: new Character({
 		sex: "male",
@@ -135,7 +137,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush17: new Character({
 		sex: "male",
@@ -143,7 +145,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 	gz_daqiush18: new Character({
 		sex: "male",
@@ -151,7 +153,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["xinliegong"],
+		skills: [],
 	}),
 };
 

@@ -212,17 +212,25 @@ export const start = async (event, trigger, player) => {
 			game.broadcastAll(createDialog, `group_${group}`, event.videoId);
 			for (const character in lib.character) {
 				const info = get.character(character);
-				if (info?.doubleGroup?.includes(group)) {
-					info.doubleGroup.remove(group);
-					if (info.group == group && info.doubleGroup?.length) {
-						info.group = info.doubleGroup[0];
-					}
-					if (info.doubleGroup.length == 1) {
-						info.doubleGroup = [];
-					}
+				// 处理主要第二势力被禁用的情况
+				if (info?.majorSecondGroup == group) {
+					info.majorSecondGroup = undefined;
 				}
+				// 处理次要第二势力被禁用的情况
+				if (info?.minorSecondGroup == group) {
+					info.minorSecondGroup = undefined;
+				}
+				// 如果主势力被禁用，尝试用第二势力替代
 				if (info.group == group) {
-					info.isUnseen = true;
+					if (info.majorSecondGroup) {
+						info.group = info.majorSecondGroup;
+						info.majorSecondGroup = undefined;
+					} else if (info.minorSecondGroup) {
+						info.group = info.minorSecondGroup;
+						info.minorSecondGroup = undefined;
+					} else {
+						info.isUnseen = true;
+					}
 				}
 				game.broadcast((name, info) => {
 					lib.character[name] = info;
@@ -311,6 +319,16 @@ export const start = async (event, trigger, player) => {
 
 export const startBefore = () => {
 	const playback = localStorage.getItem(lib.configprefix + "playback");
+
+	// 修改 _showHiddenCharacter 技能的 filter，让它也排除 guozhan_ee 模式
+	// 因为原版只排除了 "guozhan"，而 guozhan_ee 模式也需要暗置武将
+	if (lib.skill._showHiddenCharacter) {
+		const originalFilter = lib.skill._showHiddenCharacter.filter;
+		lib.skill._showHiddenCharacter.filter = function (event, player, name) {
+			if (get.mode() === "guozhan_ee") return false;
+			return originalFilter.call(this, event, player, name);
+		};
+	}
 
 	// @ts-expect-error 祖宗之法就是这么写的
 	for (let character in lib.characterPack.mode_guozhan_ee) {

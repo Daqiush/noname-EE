@@ -280,13 +280,37 @@ export class Is {
 	/**
 	 * 是否是双势力武将
 	 * @param { string } name
-	 * @param { string[] } [array]
+	 * @param { boolean } [array] - 如果为true，返回势力数组；否则返回布尔值
 	 * @returns { boolean | string[] }
 	 */
 	double(name, array) {
 		const extraInformation = get.character(name);
-		if (extraInformation && extraInformation.doubleGroup && extraInformation.doubleGroup.length > 0) {
+		if (!extraInformation) return false;
+		// 原有的 doubleGroup 逻辑
+		if (extraInformation.doubleGroup && extraInformation.doubleGroup.length > 0) {
 			return array ? extraInformation.doubleGroup.slice(0) : true;
+		}
+		// 新增的 majorSecondGroup 逻辑（与 doubleGroup 相同的显示方式）
+		if (extraInformation.majorSecondGroup) {
+			const groups = [extraInformation.group, extraInformation.majorSecondGroup];
+			return array ? groups : true;
+		}
+		return false;
+	}
+	/**
+	 * 是否有次要第二势力（minorSecondGroup）
+	 * @param { string } name
+	 * @param { boolean } [array] - 如果为true，返回 [group, minorSecondGroup] 数组；否则返回布尔值
+	 * @returns { boolean | string[] }
+	 */
+	minor(name, array) {
+		const extraInformation = get.character(name);
+		if (!extraInformation) return false;
+		if (extraInformation.minorSecondGroup) {
+			if (array) {
+				return [extraInformation.group, extraInformation.minorSecondGroup];
+			}
+			return true;
 		}
 		return false;
 	}
