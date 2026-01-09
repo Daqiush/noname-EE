@@ -1,7 +1,7 @@
 import { lib, game, ui, get as _get, ai, _status } from "../../../../../noname.js";
 import { cast } from "../../../../../noname/util/index.js";
 import { GetGuozhan } from "../../patch/get.js";
-import { PlayerGuozhan } from "../../patch/player.js";
+import { PlayerGuozhan, isYeIdentity } from "../../patch/player.js";
 
 /** @type {GetGuozhan}  */
 const get = cast(_get);
@@ -24,7 +24,7 @@ export default {
 				if (name.indexOf("gz_") == 0 && (lib.junList.includes(name.slice(3)) || get.character(name)?.junName)) {
 					const junzhu_name = get.character(name).junName ?? `gz_jun_${name.slice(3)}`,
 						group = lib.character[junzhu_name][1];
-					const notChange = game.hasPlayer(current => get.is.jun(current) && current.identity == group);
+					const notChange = game.hasPlayer(current => get.is.jun(current) && current.hasIdentity(group));
 					const result = notChange
 						? {
 								bool: false,
@@ -50,7 +50,7 @@ export default {
 							if (current == player) {
 								return current.identity != group;
 							}
-							if (current.identity != "ye") {
+							if (!isYeIdentity(current.identity)) {
 								return false;
 							}
 							return current.group == group;
@@ -113,6 +113,13 @@ export default {
 						if (player.hasSkillTag("mingzhi_no")) {
 							return 0;
 						}
+						// 测试：前缀为 gz_daqiush 的武将AI积极明置
+						if (player.name1 && player.name1.startsWith("gz_daqiush")) {
+							return 3; // 同时明置
+						}
+						if (player.name2 && player.name2.startsWith("gz_daqiush")) {
+							return 3; // 同时明置
+						}
 						var popu = get.population(lib.character[player.name1][1]);
 						if (popu >= 2 || (popu == 1 && game.players.length <= 4)) {
 							return Math.random() < 0.5 ? 3 : Math.random() < 0.5 ? 2 : 1;
@@ -141,12 +148,20 @@ export default {
 					choice = 0;
 				}
 				if (player.isUnseen(0)) {
+					// 测试：前缀为 gz_daqiush 的武将AI积极明置
+					if (player.name1 && player.name1.startsWith("gz_daqiush")) {
+						choice = 1;
+					}
 					const result = await player
 						.chooseControl("bumingzhi", "明置" + get.translation(player.name1), true)
 						.set("choice", choice)
 						.forResult();
 					control = result.control;
 				} else if (player.isUnseen(1)) {
+					// 测试：前缀为 gz_daqiush 的武将AI积极明置
+					if (player.name2 && player.name2.startsWith("gz_daqiush")) {
+						choice = 1;
+					}
 					const result = await player
 						.chooseControl("bumingzhi", "明置" + get.translation(player.name2), true)
 						.set("choice", choice)
@@ -194,6 +209,13 @@ export default {
 						return false;
 					}
 					if (player.hasSkillTag("mingzhi_yes")) {
+						return true;
+					}
+					// 测试：前缀为 gz_daqiush 的武将AI积极明置
+					if (player.name1 && player.name1.startsWith("gz_daqiush")) {
+						return true;
+					}
+					if (player.name2 && player.name2.startsWith("gz_daqiush")) {
 						return true;
 					}
 					if (player.identity != "unknown") {
@@ -292,9 +314,9 @@ export default {
 				if (get.zhu(player, null, group)) {
 					return false;
 				}
-				const num = player.identity == group ? 0 : 1;
+				const num = player.hasIdentity(group) ? 0 : 1;
 				// @ts-expect-error 类型就是这么写的
-				return get.totalPopulation(group) + num > (_status.separatism ? Math.max(get.population() / 2 - 1, 1) : get.population() / 2);
+				return get.totalPopulation(group) + num > Math.floor(get.population() / 2);
 			});
 			if (willBeYe?.length) {
 				groups.removeArray(willBeYe);
@@ -309,7 +331,7 @@ export default {
 				.set("ai", (event, player) => {
 					const { groups } = get.event();
 					const getn = group => {
-						const targets = game.filterPlayer(current => current.identity == group);
+						const targets = game.filterPlayer(current => current.hasIdentity(group));
 						if (!targets.length || group == "ye") {
 							return 1 + Math.random();
 						}
@@ -371,7 +393,7 @@ export default {
 			return false;
 		},
 		filter(event, player) {
-			if (player.identity == "ye" || player.identity == "unknown" || !player.wontYe(player.identity)) {
+			if (isYeIdentity(player.identity) || player.identity == "unknown" || !player.wontYe(player.identity)) {
 				return false;
 			}
 			if (player.hasSkill("undist")) {
@@ -439,6 +461,94 @@ export default {
 			order: 5,
 			result: {
 				player: 1,
+			},
+		},
+	},
+		_hezong: {
+		mode: ["guozhan_ee"],
+		enable: "phaseUse",
+		usable: 1,
+		prompt: "将至多三张可合纵的牌交给一名与你势力不同的角色，或未确定势力的角色，若你交给与你势力不同的角色，则你摸等量的牌",
+		filter(event, player) {
+			return player.hasCard(function (card) {
+				return card.hasTag("hezong") || card.hasGaintag("_hezong");
+			}, "h");
+		},
+		filterCard(card) {
+			if (get.itemtype(card) != "card") {
+				return false;
+			}
+			return card.hasTag("hezong") || card.hasGaintag("_hezong");
+		},
+		filterTarget(card, player, target) {
+			if (target == player) {
+				return false;
+			}
+			if (player.isUnseen()) {
+				return target.isUnseen();
+			}
+			return !target.isFriendOf(player);
+		},
+		check(card) {
+			if (card.name == "tao") {
+				return 0;
+			}
+			return 7 - get.value(card);
+		},
+		selectCard: [1, 3],
+		discard: false,
+		lose: false,
+		delay: false,
+		content() {
+			"step 0";
+			player.give(cards, target);
+			"step 1";
+			if (!target.isUnseen()) {
+				player.draw(cards.length);
+			}
+		},
+		ai: {
+			basic: {
+				order: 8,
+			},
+			result: {
+				player(player, target) {
+					var huoshao = false;
+					for (var i = 0; i < ui.selected.cards.length; i++) {
+						if (ui.selected.cards[i].name == "huoshaolianying") {
+							huoshao = true;
+							break;
+						}
+					}
+					if (huoshao && player.inline(target.getNext())) {
+						return -3;
+					}
+					if (target.isUnseen()) {
+						return 0;
+					}
+					if (player.isMajor()) {
+						return 0;
+					}
+					if (!player.isMajor() && huoshao && player.getNext().isMajor()) {
+						return -2;
+					}
+					if (!player.isMajor() && huoshao && player.getNext().isMajor() && player.getNext().getNext().isMajor()) {
+						return -3;
+					}
+					if (!player.isMajor() && huoshao && !target.isMajor() && target.getNext().isMajor() && target.getNext().getNext().isMajor()) {
+						return 3;
+					}
+					if (!player.isMajor() && huoshao && !target.isMajor() && target.getNext().isMajor()) {
+						return 1.5;
+					}
+					return 1;
+				},
+				target(player, target) {
+					if (target.isUnseen()) {
+						return 0;
+					}
+					return 1;
+				},
 			},
 		},
 	}

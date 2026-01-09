@@ -76,12 +76,23 @@ export class Character {
 	 **/
 	doubleGroup = [];
 	/**
-	 * 【黄金国战】主要的第二势力（与 minorSecondGroup 互斥）
+	 * 【黄金国战】副将的第二势力（主要）
+	 * 
+	 * 拥有此属性的武将只能作为副将使用，不能作为主将。
+	 * 当此武将作为副将单独明置时，同时属于 group 和 majorSecondGroup 两个势力。
+	 * 与 minorSecondGroup 互斥，不应同时定义。
+	 * 
 	 * @type { string|undefined }
 	 **/
 	majorSecondGroup;
 	/**
-	 * 【黄金国战】次要的第二势力（与 majorSecondGroup 互斥）
+	 * 【黄金国战】副将的第二势力（次要）
+	 * 
+	 * 拥有此属性的武将可以作为主将或副将使用。
+	 * 作为主将时，忽略此属性，只属于 group 势力。
+	 * 作为副将单独明置时，同时属于 group 和 minorSecondGroup 两个势力。
+	 * 与 majorSecondGroup 互斥，不应同时定义。
+	 * 
 	 * @type { string|undefined }
 	 **/
 	minorSecondGroup;

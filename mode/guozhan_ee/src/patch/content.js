@@ -4,7 +4,7 @@ import { GameGuozhan, broadcast, broadcastAll } from "./game.js";
 import { GetGuozhan } from "./get.js";
 import { delay } from "../../../../noname/util/index.js";
 
-import { PlayerGuozhan as Player } from "./player.js";
+import { PlayerGuozhan as Player, isYeIdentity } from "./player.js";
 
 /** @type {GameGuozhan} */
 // @ts-expect-error 类型就是这么定的
@@ -1054,7 +1054,7 @@ export const showYexingsContent = async (event, _trigger, player) => {
 
 		/** @type {Player[]} */
 		// @ts-expect-error 祖宗之法就是这么做的
-		const maybeFriends = game.players.filter(current => current.identity != "ye" && current !== target && !get.is.jun(current) && !yexingPlayers.includes(current) && !current.getStorage("yexinjia_friend").length);
+		const maybeFriends = game.players.filter(current => !isYeIdentity(current.identity) && current !== target && !get.is.jun(current) && !yexingPlayers.includes(current) && !current.getStorage("yexinjia_friend").length);
 		if (maybeFriends.length === 0) {
 			continue;
 		}
@@ -1220,6 +1220,11 @@ export const hideCharacter = async (event, _trigger, player) => {
 	}
 
 	player.checkConflict();
+	
+	// 重新计算势力
+	if (typeof player.recalculateIdentity === "function") {
+		player.recalculateIdentity();
+	}
 }
 
 /**
@@ -1481,6 +1486,11 @@ export const changeViceOnline = async (event, _trigger, player) => {
 			await player.hideCharacter(1, false);
 		}
 	}
+	
+	// 重新计算势力
+	if (typeof player.recalculateIdentity === "function") {
+		player.recalculateIdentity();
+	}
 }
 
 export const changeVice = [
@@ -1490,7 +1500,10 @@ export const changeVice = [
 			event.num = 3;
 		}
 		var group = player.identity;
-		if (!lib.group.includes(group)) {
+		// 如果是野心家身份，转换为 "ye" 用于匹配武将势力
+		if (isYeIdentity(group)) {
+			group = "ye";
+		} else if (!lib.group.includes(group)) {
 			group = lib.character[player.name1][1];
 		}
 		// @ts-expect-error 类型就是这么写的
@@ -1577,6 +1590,11 @@ export const changeVice = [
 			if (!player.isUnseen(1)) {
 				player.hideCharacter(1, false);
 			}
+		}
+		
+		// 重新计算势力
+		if (typeof player.recalculateIdentity === "function") {
+			player.recalculateIdentity();
 		}
 	},
 ];
@@ -1690,6 +1708,14 @@ export const transCharacter = async (event, _trigger, player) => {
 				player.markSkill(key);
 			}
 		}
+	}
+	
+	// 重新计算势力
+	if (typeof player.recalculateIdentity === "function") {
+		player.recalculateIdentity();
+	}
+	if (typeof target.recalculateIdentity === "function") {
+		target.recalculateIdentity();
 	}
 }
 

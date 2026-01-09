@@ -5,6 +5,7 @@ import bian from "./bian.js";
 import quan from "./quan.js";
 import yingbian from "./yingbian.js";
 import wushuang from "./wushuang.js";
+import test from "./test.js";
 
 export default {
 	...normal,
@@ -14,4 +15,5 @@ export default {
 	...quan,
 	...yingbian,
 	...wushuang,
+	...test,
 };

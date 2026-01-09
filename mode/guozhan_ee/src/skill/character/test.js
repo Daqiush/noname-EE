@@ -8,8 +8,22 @@ const get = cast(_get);
 
 /** @type {Record<string, Skill>} */
 export default {
-	// xinliegong 技能定义
-	// xinliegong: {
-	//     // 技能内容
-	// },
+	// 从魏大秋蜀二的测试技能：造成10点伤害
+	gz_daqiush2_kill: {
+		enable: "phaseUse",
+		usable: 10000,
+		filterTarget: function (card, player, target) {
+			return target !== player;
+		},
+		content: function () {
+			target.damage(10);
+		},
+		ai: {
+			// 确保AI不会使用此技能
+			order: 0,
+			result: {
+				target: 0,
+			},
+		},
+	},
 };

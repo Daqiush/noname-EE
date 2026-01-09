@@ -1,11 +1,36 @@
 import { lib, game, ui, get, ai, _status } from "../../../../noname.js";
 import { GameEvent, Dialog, Player } from "../../../../noname/library/element/index.js";
 
+/**
+ * 判断 identity 是否为野心家
+ * @param {string} identity 
+ * @returns {boolean}
+ */
+export function isYeIdentity(identity) {
+	return identity === "ye" || (typeof identity === "string" && identity.endsWith("_ye"));
+}
+
 export class PlayerGuozhan extends Player {
 	/**
 	 * @type {string}
 	 */
 	trueIdentity;
+
+	/**
+	 * 获取此玩家的野心家 identity（带座次）
+	 * @returns {string} 格式为 "座次_ye"，如 "1_ye"
+	 */
+	getYeIdentity() {
+		return `${this.getSeatNum()}_ye`;
+	}
+
+	/**
+	 * 判断此玩家是否为野心家
+	 * @returns {boolean}
+	 */
+	isYe() {
+		return isYeIdentity(this.identity);
+	}
 
 	/**
 	 * 获取玩家的势力
@@ -34,6 +59,324 @@ export class PlayerGuozhan extends Player {
 			return lib.character[this.name2].group;
 		}
 		return lib.character[this.name1].group;
+	}
+
+	/**
+	 * 获取玩家当前所属的势力集合
+	 * 
+	 * 势力集合机制：
+	 * - 每个角色所属的势力是一个集合，可以包含多个元素
+	 * - 单独明置双势力副将时，暂时同时属于两个势力（集合有两个元素）
+	 * - 单独明置汉朝副将时，暂时只属于汉势力（集合只有一个元素）
+	 * - 身份为 "unknown" 时返回空数组
+	 * - 身份为 "ye" 时返回"x号野心家"，其中若非建国则"x号"为座次，若为建国加入者则为建国者座次
+	 * - 双势力中部分为野心家时（如"野&魏"），只返回非野心家的势力部分
+	 * 
+	 * @returns { string[] } 势力集合
+	 */
+	getIdentities() {
+		// 未确定势力
+		if (this.identity === "unknown") {
+			return [];
+		}
+
+		// 完全野心家（identity 为 "x_ye" 格式或 "ye"）
+		if (this.isYe()) {
+			if (!this.getStorage("yexinjia_friend").length) {
+				// 单独野心家，返回带座次的野心家标识
+				return [this.identity];
+			} else {
+				// 有建国者的野心家
+				return this.getStorage("yexinjia_friend").map(friend => friend.identity);
+			}
+		}
+		
+		// 如果是临时使用副将势力的情况（_viceGroupTemp 为 true）
+		if (this._viceGroupTemp) {
+			// 直接从 lib.character 获取，确保获取到 Character 实例的属性
+			const viceInfo = lib.character[this.name2];
+			const viceGroup = viceInfo?.group;
+			
+			if (viceGroup === "han") {
+				// 汉朝副将只属于汉势力
+				return ["han"];
+			} else if (this._viceSecondGroup === "ye") {
+				// 有部分势力变成野心家
+				if (this._validGroup) {
+					// 第一势力超标，返回有效的第二势力
+					return [this._validGroup];
+				} else {
+					// 第二势力超标，返回有效的第一势力
+					return [viceGroup];
+				}
+			} else if (this._viceSecondGroup) {
+				// 正常双势力
+				return [viceGroup, this._viceSecondGroup];
+			} else {
+				// 普通单势力副将
+				return [viceGroup];
+			}
+		}
+		
+		// 正常情况，势力集合只包含一个 identity
+		return [this.identity];
+	}
+
+	/**
+	 * 判断两个角色的势力集合是否有交集
+	 * 
+	 * @param { Player } target 判断对象
+	 * @returns { boolean } 势力集合是否有交集
+	 */
+	hasCommonIdentity(target) {
+		const myIdentities = this.getIdentities();
+		const targetIdentities = target.getIdentities();
+		
+		// 任一方为空集合，则无交集
+		if (myIdentities.length === 0 || targetIdentities.length === 0) {
+			return false;
+		}
+		
+		// 检查是否有交集
+		return myIdentities.some(id => targetIdentities.includes(id));
+	}
+
+	/**
+	 * 判断此角色是否属于指定势力
+	 * 
+	 * @param { string } group 势力名称
+	 * @returns { boolean } 是否属于该势力
+	 */
+	hasIdentity(group) {
+		return this.getIdentities().includes(group);
+	}
+
+	/**
+	 * 重新计算角色的势力
+	 * 
+	 * 根据当前武将的明置状态重新计算势力：
+	 * - 两将均暗置：identity 为 "unknown"
+	 * - 仅主将明置：以主将势力为准
+	 * - 仅副将明置：以副将势力为准（双势力副将同时属于两个势力，汉朝副将只属于汉）
+	 * - 两将均明置：以主将势力为准
+	 * 
+	 * 野心家逻辑（双势力支持）：
+	 * - 双势力副将单亮时，每个势力分别判断是否超过阈值
+	 * - 如果某势力超标，该势力变成野心家，另一个势力可能仍然有效
+	 * - 例如：魏&蜀副将单亮，如果蜀超标但魏不超标，则为"野&魏"
+	 * - 主将明置后，以主将势力为准（如果之前已成为野心家，则保持野心家身份）
+	 */
+	recalculateIdentity() {
+		const mainUnseen = this.isUnseen(0);
+		const viceUnseen = this.isUnseen(1);
+		
+		// 两将均暗置
+		if (mainUnseen && viceUnseen) {
+			// 清除临时势力标记和野心家标记
+			delete this._viceGroupTemp;
+			delete this._viceSecondGroup;
+			delete this._confirmedYe; // 已确认的野心家身份
+			delete this._validGroup; // 有效势力标记
+			// 设为未确定
+			this.identity = "unknown";
+			this.group = "unknown";
+			this.ai.shown = 0;
+			this.setIdentity("unknown");
+			this.node.identity.classList.add("guessing");
+			return;
+		}
+		
+		// 仅副将明置
+		if (mainUnseen && !viceUnseen) {
+			// 直接从 lib.character 获取，确保获取到 Character 实例的属性
+			const viceInfo = lib.character[this.name2];
+			const viceGroup = viceInfo?.group;
+			// majorSecondGroup：副将的第二势力，禁止此武将作为主将使用
+			// minorSecondGroup：副将的第二势力，不禁止作为主将使用（作为主将时忽略此标签）
+			const viceSecondGroup = viceInfo?.majorSecondGroup || viceInfo?.minorSecondGroup;
+			
+			// DEBUG: 输出双势力信息
+			console.log(`[recalculateIdentity] name2=${this.name2}, viceGroup=${viceGroup}, majorSecondGroup=${viceInfo?.majorSecondGroup}, minorSecondGroup=${viceInfo?.minorSecondGroup}, viceSecondGroup=${viceSecondGroup}`);
+			
+			this._viceGroupTemp = true;
+			
+			if (viceGroup === "han") {
+				// 汉朝副将只属于汉势力
+				this.group = "han";
+				delete this._viceSecondGroup;
+				// 汉势力只计入汉，判断是否野心家
+				if (this.wontYe("han")) {
+					this.identity = "han";
+				} else {
+					this.identity = this.getYeIdentity();
+					this._confirmedYe = true;
+				}
+			} else if (viceSecondGroup) {
+				// 双势力副将，分别判断每个势力
+				const group1 = viceGroup;
+				const group2 = viceSecondGroup;
+				const group1WontYe = this.wontYe(group1);
+				const group2WontYe = this.wontYe(group2);
+				
+				if (group1WontYe && group2WontYe) {
+					// 两个势力都不超标，正常双势力
+					const groups = [group1, group2].sort();
+					this.group = groups.join("_");
+					this._viceSecondGroup = group2;
+					this.identity = group1; // 主势力作为 identity
+					console.log(`[recalculateIdentity] 双势力设置: group=${this.group}, identity=${this.identity}, _viceSecondGroup=${this._viceSecondGroup}`);
+				} else if (group1WontYe && !group2WontYe) {
+					// 第二势力超标变野心家，第一势力有效
+					const groups = [group1, "ye"].sort();
+					this.group = groups.join("_");
+					this._viceSecondGroup = "ye"; // 第二势力变成野心家
+					this.identity = group1;
+					this._confirmedYe = true;
+				} else if (!group1WontYe && group2WontYe) {
+					// 第一势力超标变野心家，第二势力有效
+					const groups = [group2, "ye"].sort();
+					this.group = groups.join("_");
+					this._viceSecondGroup = "ye"; // 第一势力变成野心家，用ye标记
+					this._validGroup = group2; // 保存有效的势力
+					this.identity = group2;
+					this._confirmedYe = true;
+				} else {
+					// 两个势力都超标，完全成为野心家
+					this.group = "ye";
+					delete this._viceSecondGroup;
+					this.identity = this.getYeIdentity();
+					this._confirmedYe = true;
+				}
+			} else {
+				// 普通单势力副将
+				if (this.wontYe(viceGroup)) {
+					this.group = viceGroup;
+					this.identity = viceGroup;
+					console.log(`[recalculateIdentity] 单势力非野心家: viceGroup=${viceGroup}, group=${this.group}, identity=${this.identity}`);
+				} else {
+					this.group = "ye";  // 成为野心家，group 也变成 ye
+					this.identity = this.getYeIdentity();
+					this._confirmedYe = true;
+					console.log(`[recalculateIdentity] 单势力野心家: viceGroup=${viceGroup}, group=${this.group}, identity=${this.identity}`);
+				}
+				delete this._viceSecondGroup;
+			}
+			
+			console.log(`[recalculateIdentity] 设置 setIdentity 之前: group=${this.group}, identity=${this.identity}`);
+			this.setIdentity(this.identity);
+			this.ai.shown = 1;
+			return;
+		}
+		
+		// 主将明置（无论副将是否明置，都以主将势力为准）
+		if (!mainUnseen) {
+			// 清除临时势力标记
+			delete this._viceGroupTemp;
+			delete this._viceSecondGroup;
+			delete this._validGroup;
+			
+			const mainGroup = this.getGuozhanGroup(0);
+			
+			// 设置 identity 和 group
+			if (lib.character[this.name1][1] === "ye") {
+				// 主将本身就是野心家势力
+				this.group = "ye";
+				this.identity = this.getYeIdentity();
+			} else if (this._confirmedYe) {
+				// 之前已经确认为野心家，保持野心家身份和势力
+				this.group = "ye";
+				this.identity = this.getYeIdentity();
+			} else if (get.is.jun(this.name1) && this.isAlive()) {
+				// 君主
+				this.group = mainGroup;
+				this.identity = this.group;
+			} else if (this.wontYe(mainGroup)) {
+				// 正常势力
+				this.group = mainGroup;
+				this.identity = this.group;
+			} else {
+				// 主将势力超标，成为野心家
+				this.group = "ye";
+				this.identity = this.getYeIdentity();
+				this._confirmedYe = true;
+			}
+			
+			console.log(`[recalculateIdentity] 主将明置: mainGroup=${mainGroup}, group=${this.group}, identity=${this.identity}, _confirmedYe=${this._confirmedYe}`);
+			this.setIdentity(this.identity);
+			this.ai.shown = 1;
+			return;
+		}
+	}
+
+	/**
+	 * 判断是否为友方（基于势力集合交集）
+	 * 
+	 * @param { Player } target 判断对象
+	 * @returns { boolean }
+	 */
+	isFriendOf(target) {
+		// 自己是自己的友方
+		if (this === target) {
+			return true;
+		}
+		
+		// 野心家建国情况
+		if (this.getStorage("yexinjia_friend").includes(target) || target.getStorage("yexinjia_friend").includes(this)) {
+			return true;
+		}
+		
+		// 任一方身份未确定
+		if (this.identity === "unknown" || target.identity === "unknown") {
+			return false;
+		}
+		
+		// 野心家判断：每个野心家是独立的势力
+		if (this.isYe() || target.isYe()) {
+			// 使用势力集合交集判断（野心家的 identity 互相不同）
+			return this.hasCommonIdentity(target);
+		}
+		
+		// 使用势力集合交集判断
+		return this.hasCommonIdentity(target);
+	}
+
+	/**
+	 * 判断是否为敌方
+	 * 
+	 * @param { Player } target 判断对象
+	 * @returns { boolean }
+	 */
+	isEnemyOf(target) {
+		return !this.isFriendOf(target);
+	}
+
+	/**
+	 * 设置身份显示（覆盖基类方法以支持野心家座次格式和双势力显示）
+	 * 
+	 * @param {string} [identity] 身份标识
+	 * @param {string} [nature] 颜色标识
+	 * @returns {this}
+	 */
+	setIdentity(identity, nature) {
+		if (!identity) {
+			identity = this.identity;
+		}
+		console.log(`[setIdentity] 入参 identity=${identity}, nature=${nature}, this.group=${this.group}`);
+		if (get.is.jun(this)) {
+			this.node.identity.firstChild.innerHTML = "君";
+		} else {
+			// 优先显示 group（支持双势力如 "shu_wei"），其次显示 identity
+			const displayGroup = this.group && this.group !== "unknown" ? this.group : identity;
+			console.log(`[setIdentity] displayGroup=${displayGroup}, translation=${get.translation(displayGroup)}`);
+			this.node.identity.firstChild.innerHTML = get.translation(displayGroup);
+		}
+		// 对于 "x_ye" 格式的野心家身份，颜色使用 "ye"
+		let color = nature || identity;
+		if (isYeIdentity(identity)) {
+			color = nature || "ye";
+		}
+		this.node.identity.dataset.color = color;
+		return this;
 	}
 
 	/**
@@ -160,13 +503,15 @@ export class PlayerGuozhan extends Player {
 			if (target.identity == "unknown") {
 				return false;
 			}
-			if (target.identity == "ye" || this.identity == "ye") {
+			if (isYeIdentity(target.identity) || this.isYe()) {
 				return true;
 			}
 			if (this.identity == "unknown") {
 				var identity = lib.character[this.name1][1];
 				if (this.wontYe()) {
-					return identity != target.identity;
+					// 使用势力集合判断
+					const targetIdentities = target.getIdentities();
+					return !targetIdentities.includes(identity);
 				}
 				return true;
 			}
@@ -174,11 +519,12 @@ export class PlayerGuozhan extends Player {
 			if (this.identity == "unknown" || target.identity == "unknown") {
 				return false;
 			}
-			if (this.identity == "ye" || target.identity == "ye") {
+			if (this.isYe() || isYeIdentity(target.identity)) {
 				return true;
 			}
 		}
-		return this.identity != target.identity;
+		// 使用势力集合无交集判断
+		return !this.hasCommonIdentity(target);
 	}
 
 	/**
@@ -196,7 +542,7 @@ export class PlayerGuozhan extends Player {
 			return true;
 		}
 		if (shown) {
-			if (this.identity == "ye" || this.identity == "unknown") {
+			if (this.isYe() || this.identity == "unknown") {
 				return false;
 			}
 		} else {
@@ -204,18 +550,21 @@ export class PlayerGuozhan extends Player {
 			if (this == target) {
 				return true;
 			}
-			if (target.identity == "unknown" || target.identity == "ye" || this.identity == "ye") {
+			if (target.identity == "unknown" || isYeIdentity(target.identity) || this.isYe()) {
 				return false;
 			}
 			if (this.identity == "unknown") {
 				var identity = lib.character[this.name1][1];
 				if (this.wontYe()) {
-					return identity == target.identity;
+					// 使用势力集合判断
+					const targetIdentities = target.getIdentities();
+					return targetIdentities.includes(identity);
 				}
 				return false;
 			}
 		}
-		return this.identity == target.identity;
+		// 使用势力集合有交集判断
+		return this.hasCommonIdentity(target);
 	}
 
 	/**
@@ -277,7 +626,7 @@ export class PlayerGuozhan extends Player {
 			source.discard(source.getCards("he"));
 			delete source.shijun;
 		} else if (source && source.identity != "unknown") {
-			if (source.identity == "ye" && !source.getStorage("yexinjia_friend").length) {
+			if (isYeIdentity(source.identity) && !source.getStorage("yexinjia_friend").length) {
 				source.draw(3);
 			} else if (source.shijun2) {
 				delete source.shijun2;
@@ -287,7 +636,7 @@ export class PlayerGuozhan extends Player {
 							return current.group == that.group;
 						})
 				);
-			} else if (that.identity == "ye") {
+			} else if (isYeIdentity(that.identity)) {
 				if (that.getStorage("yexinjia_friend").includes(source) || source.getStorage("yexinjia_friend").includes(that)) {
 					source.discard(source.getCards("he"));
 				} else {
@@ -308,9 +657,11 @@ export class PlayerGuozhan extends Player {
 							})
 					);
 				}
-			} else if (that.identity != source.identity) {
+			} else if (!source.hasCommonIdentity(that)) {
+				// 不同势力（使用势力集合判断，支持双势力副将）
 				source.draw(get.population(that.identity) + 1);
 			} else {
+				// 同势力
 				source.discard(source.getCards("he"));
 			}
 		}
@@ -320,22 +671,26 @@ export class PlayerGuozhan extends Player {
 		if (get.is.jun(this.name1)) {
 			if (source && source.identity == this.identity) {
 				source.shijun = true;
-			} else if (source && source.identity != "ye") {
+			} else if (source && !isYeIdentity(source.identity)) {
 				source.shijun2 = true;
 			}
 			var yelist = [];
+			/** @type {string[]} */
+			var yeIdentities = [];
 			for (var i = 0; i < game.players.length; i++) {
 				if (game.players[i].identity == this.identity) {
 					yelist.push(game.players[i]);
+					// 每个玩家获取自己的野心家身份（带座次）
+					yeIdentities.push(game.players[i].getYeIdentity ? game.players[i].getYeIdentity() : `${game.players[i].getSeatNum()}_ye`);
 				}
 			}
 			// @ts-expect-error 类型就是这么写的
-			game.broadcastAll(function (list) {
+			game.broadcastAll(function (list, identities) {
 				for (var i = 0; i < list.length; i++) {
-					list[i].identity = "ye";
+					list[i].identity = identities[i];
 					list[i].setIdentity();
 				}
-			}, yelist);
+			}, yelist, yeIdentities);
 			// @ts-expect-error 类型就是这么写的
 			_status.yeidentity.add(this.identity);
 		}
@@ -584,72 +939,7 @@ export class PlayerGuozhan extends Player {
 		// @ts-expect-error 类型就是这么写的
 		game.addVideo("showCharacter", this, num);
 		
-		// 单独明置副将时的特殊处理
-		const isOnlyViceShow = num == 1 && this.isUnseen(0);
-		// 明置主将时，检查是否需要恢复势力（之前只明置了副将）
-		const shouldRestoreMainGroup = (num == 0 || num == 2) && this._viceGroupTemp;
-		
-		if (this.identity == "unknown" || ((num == 0 || num == 2) && lib.character[this.name1][1] == "ye") || shouldRestoreMainGroup) {
-			// 如果是明置主将且之前临时使用了副将势力，恢复主将势力
-			if (shouldRestoreMainGroup) {
-				delete this._viceGroupTemp;
-				this.group = this.getGuozhanGroup(0);
-			} else if (isOnlyViceShow) {
-				// 单独明置副将时，以副将势力为准
-				const viceInfo = get.character(this.name2);
-				const viceGroup = viceInfo?.group;
-				const viceSecondGroup = viceInfo?.majorSecondGroup || viceInfo?.minorSecondGroup;
-				
-				if (viceGroup === "han") {
-					// 副将势力为汉，直接使用汉
-					this.group = "han";
-				} else if (viceSecondGroup) {
-					// 副将有第二势力，使用组合势力（如 wei_shu）
-					// 按字母顺序排列以确保一致性
-					const groups = [viceGroup, viceSecondGroup].sort();
-					this.group = groups.join("_");
-				} else {
-					// 普通单势力副将
-					this.group = viceGroup;
-				}
-				// 标记为临时使用副将势力
-				this._viceGroupTemp = true;
-			} else {
-				this.group = this.getGuozhanGroup(num);
-			}
-			
-			if ((num == 0 || num == 2) && lib.character[this.name1][1] == "ye") {
-				this.identity = "ye";
-				if (!this._ye) {
-					this._ye = true;
-					showYe = true;
-				}
-			} else if (get.is.jun(this.name1) && this.isAlive()) {
-				this.identity = this.group;
-			} else if (this.wontYe(this.group)) {
-				this.identity = this.group;
-			} else {
-				this.identity = "ye";
-			}
-			this.setIdentity(this.identity);
-			this.ai.shown = 1;
-			this.node.identity.classList.remove("guessing");
-
-			// @ts-expect-error 类型就是这么写的
-			if (_status.clickingidentity && _status.clickingidentity[0] == this) {
-				// @ts-expect-error 类型就是这么写的
-				for (var i = 0; i < _status.clickingidentity[1].length; i++) {
-					// @ts-expect-error 类型就是这么写的
-					_status.clickingidentity[1][i].delete();
-					// @ts-expect-error 类型就是这么写的
-					_status.clickingidentity[1][i].style.transform = "";
-				}
-				// @ts-expect-error 类型就是这么写的
-				delete _status.clickingidentity;
-			}
-			// @ts-expect-error 类型就是这么写的
-			game.addVideo("setIdentity", this, this.identity);
-		}
+		// 先更新武将明置状态
 		var skills;
 		switch (num) {
 			case 0:
@@ -685,6 +975,38 @@ export class PlayerGuozhan extends Player {
 				this.classList.remove("unseen2");
 				break;
 		}
+		
+		// 武将明置状态更新后，再计算势力
+		if (this.identity == "unknown" || (num == 0 || num == 2) && lib.character[this.name1][1] == "ye" || this._viceGroupTemp) {
+			// 使用 recalculateIdentity 统一处理势力计算（包括双势力野心家判断）
+			this.recalculateIdentity();
+			
+			// 检查是否需要显示野心家动画
+			if ((num == 0 || num == 2) && lib.character[this.name1][1] == "ye") {
+				if (!this._ye) {
+					this._ye = true;
+					showYe = true;
+				}
+			}
+			
+			this.node.identity.classList.remove("guessing");
+
+			// @ts-expect-error 类型就是这么写的
+			if (_status.clickingidentity && _status.clickingidentity[0] == this) {
+				// @ts-expect-error 类型就是这么写的
+				for (var i = 0; i < _status.clickingidentity[1].length; i++) {
+					// @ts-expect-error 类型就是这么写的
+					_status.clickingidentity[1][i].delete();
+					// @ts-expect-error 类型就是这么写的
+					_status.clickingidentity[1][i].style.transform = "";
+				}
+				// @ts-expect-error 类型就是这么写的
+				delete _status.clickingidentity;
+			}
+			// @ts-expect-error 类型就是这么写的
+			game.addVideo("setIdentity", this, this.identity);
+		}
+		
 		game.broadcast(
 			// @ts-expect-error 类型就是这么写的
 			function (player, name, sex, num, identity, group) {
@@ -807,8 +1129,17 @@ export class PlayerGuozhan extends Player {
 		if (!numOfReadyToShow) {
 			numOfReadyToShow = 1;
 		}
-		// @ts-expect-error 类型就是这么写的
-		return get.totalPopulation(group) + numOfReadyToShow <= (_status.separatism ? Math.max(get.population() / 2 - 1, 1) : get.population() / 2);
+		
+		// 计算阈值：游戏人数除以2，向下取整
+		const threshold = Math.floor(get.population() / 2);
+		
+		// 使用支持双势力的人口计算函数
+		// 注意：这里使用 totalPopulation 的逻辑（包含死亡角色）
+		const currentPopulation = typeof get.populationOf === "function" 
+			? get.populationOf(group, true)  // includeDead = true
+			: get.totalPopulation(group);    // 降级处理
+		
+		return currentPopulation + numOfReadyToShow <= threshold;
 	}
 
 	/**
@@ -931,7 +1262,7 @@ export class PlayerGuozhan extends Player {
 	 * @returns { boolean }
 	 */
 	inline() {
-		if (this.identity == "unknown" || this.identity == "ye" || this.hasSkill("undist")) {
+		if (this.identity == "unknown" || this.isYe() || this.hasSkill("undist")) {
 			return false;
 		}
 		var next = this,

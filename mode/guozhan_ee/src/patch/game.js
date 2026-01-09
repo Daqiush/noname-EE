@@ -2,6 +2,7 @@ import { lib, game, ui, get, ai, _status } from "../../../../noname.js";
 import { GameEvent, Dialog, Player } from "../../../../noname/library/element/index.js";
 import { Game } from "../../../../noname/game/index.js";
 import { showYexingsContent, chooseCharacterContent, chooseCharacterOLContent } from "./content.js";
+import { isYeIdentity } from "./player.js";
 
 export class GameGuozhan extends Game {
 	/**
@@ -265,10 +266,10 @@ export class GameGuozhan extends Game {
 			ye: "野",
 			unknown: "猜",
 		};
-		const maxPlayer = (_status.separatism ? Math.max(get.population() / 2 - 1, 1) : get.population() / 2);
+		const maxPlayer = Math.floor(get.population() / 2);
 		for ( let group of ["wei", "shu", "wu", "qun", "jin"]) {
 			if (group == _status.bannedGroup?.slice(6) || get.population(group) >= maxPlayer && !game.hasPlayer(current => {
-				return get.is.jun(current) && current.identity == group;
+				return get.is.jun(current) && current.hasIdentity(group);
 			})) {
 				// @ts-expect-error 祖宗之法就是这么写的
 				delete list[group];
@@ -321,7 +322,7 @@ export class GameGuozhan extends Game {
 					separatism: true,
 				})
 			: get.cnNumber(parseInt(get.config("player_number"))) + "人" + get.translation(lib.config.mode);
-		if (game.me.identity == "ye") {
+		if (isYeIdentity(game.me.identity)) {
 			str2 += " - 野心家";
 		}
 		return [str, str2];
@@ -375,7 +376,7 @@ export class GameGuozhan extends Game {
 				if (
 					map[sides[0]].length == 1 &&
 					!map[sides[1]].filter(function (i) {
-						return i.identity != "ye" && i.isUnseen(0);
+						return !isYeIdentity(i.identity) && i.isUnseen(0);
 					}).length
 				) {
 					map[sides[0]][0].showGiveup();
@@ -383,7 +384,7 @@ export class GameGuozhan extends Game {
 				if (
 					map[sides[1]].length == 1 &&
 					!map[sides[0]].filter(function (i) {
-						return i.identity != "ye" && i.isUnseen(0);
+						return !isYeIdentity(i.identity) && i.isUnseen(0);
 					}).length
 				) {
 					map[sides[1]][0].showGiveup();
@@ -391,7 +392,7 @@ export class GameGuozhan extends Game {
 			}
 		} else {
 			var isYe = function (player) {
-				return player.identity != "ye" && lib.character[player.name1][1] == "ye";
+				return !isYeIdentity(player.identity) && lib.character[player.name1][1] == "ye";
 			};
 			if (!hiddens.length) {
 				if (map[sides[0]].length > 1) {
@@ -412,7 +413,7 @@ export class GameGuozhan extends Game {
 				game.checkResult();
 			} else {
 				var identity = map[sides[0]][0].identity;
-				if (identity == "ye") {
+				if (isYeIdentity(identity)) {
 					return;
 				}
 				// @ts-expect-error 祖宗之法就是这么写的

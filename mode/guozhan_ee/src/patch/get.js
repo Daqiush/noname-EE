@@ -4,6 +4,7 @@ import { lib, game, ui, get, ai, _status } from "../../../../noname.js";
 import { GameEvent, Dialog, Player } from "../../../../noname/library/element/index.js";
 import { Get } from "../../../../noname/get/index.js";
 import { showYexingsContent, chooseCharacterContent, chooseCharacterOLContent } from "./content.js";
+import { isYeIdentity } from "./player.js";
 
 export class GetGuozhan extends Get {
 	/**
@@ -180,6 +181,67 @@ export class GetGuozhan extends Get {
 	}
 
 	/**
+	 * 获取属于某势力的人口数（支持双势力）
+	 * 
+	 * 计算规则：
+	 * - 使用 hasIdentity(group) 判断角色是否属于该势力
+	 * - 双势力武将同时计入两个势力的人口
+	 * - 已确定为野心家的角色不计入任何势力人口
+	 * 
+	 * @param {string} group 势力名称
+	 * @param {boolean} [includeDead=false] 是否包含死亡角色
+	 * @returns {number} 人口数
+	 */
+	populationOf(group, includeDead = false) {
+		if (!group) {
+			return includeDead ? game.players.length + game.dead.length : game.players.length;
+		}
+		
+		const players = includeDead ? game.players.concat(game.dead) : game.players;
+		return players.filter(current => {
+			// 未确定势力不计入
+			if (current.identity === "unknown") {
+				return false;
+			}
+			// 野心家不计入正常势力人口
+			if (isYeIdentity(current.identity)) {
+				return false;
+			}
+			// 使用 hasIdentity 判断是否属于该势力（支持双势力）
+			if (typeof current.hasIdentity === "function") {
+				return current.hasIdentity(group);
+			}
+			// 降级处理：使用 identity 直接比较
+			return current.identity === group;
+		}).length;
+	}
+
+	/**
+	 * 检查某角色加入某势力后是否会成为野心家
+	 * 
+	 * @param {string} group 势力名称
+	 * @param {number} [numOfReadyToShow=1] 即将加入的人数
+	 * @returns {boolean} 是否会成为野心家
+	 */
+	wouldBeYexinjia(group, numOfReadyToShow = 1) {
+		// 已被禁用的势力
+		if (_status.yeidentity && _status.yeidentity.includes(group)) {
+			return true;
+		}
+		
+		// 有君主的势力不会产生野心家
+		if (game.hasPlayer(current => get.is.jun(current) && current.hasIdentity && current.hasIdentity(group))) {
+			return false;
+		}
+		
+		// 计算阈值：游戏人数除以2，向下取整
+		const threshold = Math.floor(get.population() / 2);
+		
+		// 当前人口 + 即将加入的人数 > 阈值 则成为野心家
+		return get.populationOf(group) + numOfReadyToShow > threshold;
+	}
+
+	/**
 	 * > ?.??
 	 *
 	 * @param {Player} from
@@ -198,11 +260,26 @@ export class GetGuozhan extends Get {
 			}
 			return player.identity;
 		};
+		
+		// 检查势力是否匹配（支持势力集合）
+		var hasMatchingIdentity = function (player, targetIdentity) {
+			if (isYeIdentity(targetIdentity) || targetIdentity === "unknown") {
+				return false;
+			}
+			// 如果目标是组合势力，拆分检查
+			if (targetIdentity && targetIdentity.includes("_") && !targetIdentity.endsWith("_ye")) {
+				const parts = targetIdentity.split("_");
+				return player.getIdentities().some(id => parts.includes(id));
+			}
+			return player.hasIdentity ? player.hasIdentity(targetIdentity) : player.identity === targetIdentity;
+		};
+		
 		var fid = getIdentity(from);
-		if (fid == toidentity && toidentity != "ye") {
+		// 使用势力集合判断
+		if (hasMatchingIdentity(from, toidentity) && !isYeIdentity(toidentity)) {
 			return 4 + difficulty;
 		}
-		if (from.identity == "unknown" && fid == toidentity) {
+		if (from.identity == "unknown" && hasMatchingIdentity(from, toidentity)) {
 			if (from.wontYe()) {
 				return 4 + difficulty;
 			}
@@ -254,7 +331,7 @@ export class GetGuozhan extends Get {
 		var to_p = game.countPlayer(function (current) {
 			return current.isFriendOf(to);
 		}, true);
-		if (to.identity == "ye") {
+		if (isYeIdentity(to.identity)) {
 			to_p += 1.5;
 		}
 
@@ -293,6 +370,20 @@ export class GetGuozhan extends Get {
 			}
 			return player.identity;
 		};
+		
+		// 检查势力是否匹配（支持势力集合）
+		var hasMatchingIdentity = function (player, targetIdentity) {
+			if (isYeIdentity(targetIdentity) || targetIdentity === "unknown") {
+				return false;
+			}
+			// 如果目标是组合势力，拆分检查
+			if (targetIdentity && targetIdentity.includes("_") && !targetIdentity.endsWith("_ye")) {
+				const parts = targetIdentity.split("_");
+				return player.getIdentities().some(id => parts.includes(id));
+			}
+			return player.hasIdentity ? player.hasIdentity(targetIdentity) : player.identity === targetIdentity;
+		};
+		
 		var fid = getIdentity(from),
 			tid = getIdentity(to);
 		if (to.identity == "unknown" && game.players.length == 2) {
@@ -311,7 +402,8 @@ export class GetGuozhan extends Get {
 		if (from.isFriendOf(to)) {
 			return 5 + difficulty;
 		}
-		if (from.identity == "unknown" && fid == to.identity) {
+		// 使用势力集合判断
+		if (from.identity == "unknown" && hasMatchingIdentity(from, to.identity)) {
 			if (from.wontYe()) {
 				return 4 + difficulty;
 			}
