@@ -184,7 +184,9 @@ export class GetGuozhan extends Get {
 	 * 获取属于某势力的人口数（支持双势力）
 	 * 
 	 * 计算规则：
-	 * - 使用 hasIdentity(group) 判断角色是否属于该势力
+	 * - 基于玩家的主将/副将明置状态来计算
+	 * - 主将明置：计入主将势力
+	 * - 仅副将明置：计入副将势力（包括双势力）
 	 * - 双势力武将同时计入两个势力的人口
 	 * - 已确定为野心家的角色不计入任何势力人口
 	 * 
@@ -198,22 +200,55 @@ export class GetGuozhan extends Get {
 		}
 		
 		const players = includeDead ? game.players.concat(game.dead) : game.players;
-		return players.filter(current => {
-			// 未确定势力不计入
-			if (current.identity === "unknown") {
-				return false;
+		let count = 0;
+		
+		for (const player of players) {
+			// 已确认为野心家的玩家不计入任何势力人口
+			if (player._confirmedYe) {
+				continue;
 			}
-			// 野心家不计入正常势力人口
-			if (isYeIdentity(current.identity)) {
-				return false;
+			
+			const mainUnseen = player.isUnseen(0);
+			const viceUnseen = player.isUnseen(1);
+			
+			// 两将均暗置，不计入人口
+			if (mainUnseen && viceUnseen) {
+				continue;
 			}
-			// 使用 hasIdentity 判断是否属于该势力（支持双势力）
-			if (typeof current.hasIdentity === "function") {
-				return current.hasIdentity(group);
+			
+			// 主将明置：以主将势力为准
+			if (!mainUnseen) {
+				const mainGroup = lib.character[player.name1]?.[1];
+				// 野心家势力的主将不计入正常势力人口
+				if (mainGroup === "ye") {
+					continue;
+				}
+				if (mainGroup === group) {
+					count++;
+				}
+				continue;
 			}
-			// 降级处理：使用 identity 直接比较
-			return current.identity === group;
-		}).length;
+			
+			// 仅副将明置：计入副将势力（包括双势力）
+			if (mainUnseen && !viceUnseen) {
+				const viceInfo = lib.character[player.name2];
+				const viceGroup = viceInfo?.[1] ?? viceInfo?.group;
+				// 野心家势力的副将不计入正常势力人口
+				if (viceGroup === "ye") {
+					continue;
+				}
+				const viceSecondGroup = viceInfo?.majorSecondGroup || viceInfo?.minorSecondGroup;
+				
+				if (viceGroup === group) {
+					count++;
+				} else if (viceSecondGroup === group) {
+					count++;
+				}
+				continue;
+			}
+		}
+		
+		return count;
 	}
 
 	/**

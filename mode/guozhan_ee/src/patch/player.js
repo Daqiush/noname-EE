@@ -165,6 +165,11 @@ export class PlayerGuozhan extends Player {
 	 * - 如果某势力超标，该势力变成野心家，另一个势力可能仍然有效
 	 * - 例如：魏&蜀副将单亮，如果蜀超标但魏不超标，则为"野&魏"
 	 * - 主将明置后，以主将势力为准（如果之前已成为野心家，则保持野心家身份）
+	 * 
+	 * 野心家身份清除逻辑：
+	 * - 当暗置主将后仅副将明置时，如果副将势力不包含之前导致成为野心家的势力，则清除野心家标记
+	 * - 例如：主将蜀副将汉，因蜀满员成为野心家后，暗置主将变成汉朝，此时野心家标记被清除
+	 * - 再次明置主将时，重新判断蜀国是否满员
 	 */
 	recalculateIdentity() {
 		const mainUnseen = this.isUnseen(0);
@@ -176,6 +181,8 @@ export class PlayerGuozhan extends Player {
 			delete this._viceGroupTemp;
 			delete this._viceSecondGroup;
 			delete this._confirmedYe; // 已确认的野心家身份
+			delete this._confirmedYeGroup; // 导致成为野心家的势力
+			delete this._exposedYeGroups; // 清除所有暴露野心的记录
 			delete this._validGroup; // 有效势力标记
 			// 设为未确定
 			this.identity = "unknown";
@@ -198,6 +205,33 @@ export class PlayerGuozhan extends Player {
 			// DEBUG: 输出双势力信息
 			console.log(`[recalculateIdentity] name2=${this.name2}, viceGroup=${viceGroup}, majorSecondGroup=${viceInfo?.majorSecondGroup}, minorSecondGroup=${viceInfo?.minorSecondGroup}, viceSecondGroup=${viceSecondGroup}`);
 			
+			// 副将势力集合
+			const viceGroups = [viceGroup];
+			if (viceSecondGroup) {
+				viceGroups.push(viceSecondGroup);
+			}
+			
+			// 清除不在副将势力中的暴露野心记录
+			// 只有副将势力不包含某个暴露势力时，才能清除该势力的暴露记录
+			if (this._exposedYeGroups && this._exposedYeGroups.length > 0) {
+				this._exposedYeGroups = this._exposedYeGroups.filter(g => viceGroups.includes(g));
+				if (this._exposedYeGroups.length === 0) {
+					delete this._exposedYeGroups;
+				}
+				console.log(`[recalculateIdentity] 更新后的暴露野心记录: [${this._exposedYeGroups?.join(", ") || "无"}]`);
+			}
+			
+			// 检查是否需要清除当前野心家标记
+			// 如果之前因某势力成为野心家，但副将势力不包含该势力，则清除野心家标记
+			if (this._confirmedYe && this._confirmedYeGroup) {
+				// 如果副将势力不包含导致成为野心家的势力，清除野心家标记
+				if (!viceGroups.includes(this._confirmedYeGroup)) {
+					console.log(`[recalculateIdentity] 副将势力 [${viceGroups.join(", ")}] 不包含野心家势力 ${this._confirmedYeGroup}，清除野心家标记`);
+					delete this._confirmedYe;
+					delete this._confirmedYeGroup;
+				}
+			}
+			
 			this._viceGroupTemp = true;
 			
 			if (viceGroup === "han") {
@@ -210,6 +244,8 @@ export class PlayerGuozhan extends Player {
 				} else {
 					this.identity = this.getYeIdentity();
 					this._confirmedYe = true;
+					this._confirmedYeGroup = "han";
+					this.exposeYeToGroup("han");
 				}
 			} else if (viceSecondGroup) {
 				// 双势力副将，分别判断每个势力
@@ -232,6 +268,8 @@ export class PlayerGuozhan extends Player {
 					this._viceSecondGroup = "ye"; // 第二势力变成野心家
 					this.identity = group1;
 					this._confirmedYe = true;
+					this._confirmedYeGroup = group2; // 记录是哪个势力导致成为野心家
+					this.exposeYeToGroup(group2);
 				} else if (!group1WontYe && group2WontYe) {
 					// 第一势力超标变野心家，第二势力有效
 					const groups = [group2, "ye"].sort();
@@ -240,14 +278,20 @@ export class PlayerGuozhan extends Player {
 					this._validGroup = group2; // 保存有效的势力
 					this.identity = group2;
 					this._confirmedYe = true;
+					this._confirmedYeGroup = group1; // 记录是哪个势力导致成为野心家
+					this.exposeYeToGroup(group1);
 				} else {
 					// 两个势力都超标，完全成为野心家
 					this.group = "ye";
 					delete this._viceSecondGroup;
 					this.identity = this.getYeIdentity();
 					this._confirmedYe = true;
+					// 两个势力都导致野心家，记录主势力
+					this._confirmedYeGroup = group1;
+					this.exposeYeToGroup(group1);
+					this.exposeYeToGroup(group2);
 				}
-			} else {
+						} else {
 				// 普通单势力副将
 				if (this.wontYe(viceGroup)) {
 					this.group = viceGroup;
@@ -257,6 +301,8 @@ export class PlayerGuozhan extends Player {
 					this.group = "ye";  // 成为野心家，group 也变成 ye
 					this.identity = this.getYeIdentity();
 					this._confirmedYe = true;
+					this._confirmedYeGroup = viceGroup; // 记录是哪个势力导致成为野心家
+					this.exposeYeToGroup(viceGroup);
 					console.log(`[recalculateIdentity] 单势力野心家: viceGroup=${viceGroup}, group=${this.group}, identity=${this.identity}`);
 				}
 				delete this._viceSecondGroup;
@@ -277,15 +323,36 @@ export class PlayerGuozhan extends Player {
 			
 			const mainGroup = this.getGuozhanGroup(0);
 			
+			// 保存之前的野心家信息，用于判断是否保持野心家身份
+			const wasConfirmedYe = this._confirmedYe;
+			const wasConfirmedYeGroup = this._confirmedYeGroup;
+			
+			// 清除野心家标记，准备重新判断主将势力
+			// （如果主将势力也超标，会重新设置；如果不超标，则不再是野心家）
+			delete this._confirmedYe;
+			delete this._confirmedYeGroup;
+			
+			// 清除与主将势力不同的暴露野心记录
+			// 例如：AB双势力副将对A暴露野心后，明置B势力主将，则清除对A的暴露记录
+			if (this._exposedYeGroups && this._exposedYeGroups.length > 0) {
+				this._exposedYeGroups = this._exposedYeGroups.filter(g => g === mainGroup);
+				if (this._exposedYeGroups.length === 0) {
+					delete this._exposedYeGroups;
+				}
+				console.log(`[recalculateIdentity] 主将明置后更新暴露野心记录: [${this._exposedYeGroups?.join(", ") || "无"}]`);
+			}
+			
 			// 设置 identity 和 group
 			if (lib.character[this.name1][1] === "ye") {
 				// 主将本身就是野心家势力
 				this.group = "ye";
 				this.identity = this.getYeIdentity();
-			} else if (this._confirmedYe) {
-				// 之前已经确认为野心家，保持野心家身份和势力
+			} else if (wasConfirmedYe && wasConfirmedYeGroup === mainGroup) {
+				// 之前已经确认为野心家，且是因为同一势力，保持野心家身份
 				this.group = "ye";
 				this.identity = this.getYeIdentity();
+				this._confirmedYe = true;
+				this._confirmedYeGroup = mainGroup;
 			} else if (get.is.jun(this.name1) && this.isAlive()) {
 				// 君主
 				this.group = mainGroup;
@@ -299,9 +366,11 @@ export class PlayerGuozhan extends Player {
 				this.group = "ye";
 				this.identity = this.getYeIdentity();
 				this._confirmedYe = true;
+				this._confirmedYeGroup = mainGroup; // 记录是哪个势力导致成为野心家
+				this.exposeYeToGroup(mainGroup);
 			}
 			
-			console.log(`[recalculateIdentity] 主将明置: mainGroup=${mainGroup}, group=${this.group}, identity=${this.identity}, _confirmedYe=${this._confirmedYe}`);
+			console.log(`[recalculateIdentity] 主将明置: mainGroup=${mainGroup}, group=${this.group}, identity=${this.identity}, _confirmedYe=${this._confirmedYe}, _confirmedYeGroup=${this._confirmedYeGroup}`);
 			this.setIdentity(this.identity);
 			this.ai.shown = 1;
 			return;
@@ -365,10 +434,15 @@ export class PlayerGuozhan extends Player {
 		if (get.is.jun(this)) {
 			this.node.identity.firstChild.innerHTML = "君";
 		} else {
-			// 优先显示 group（支持双势力如 "shu_wei"），其次显示 identity
-			const displayGroup = this.group && this.group !== "unknown" ? this.group : identity;
-			console.log(`[setIdentity] displayGroup=${displayGroup}, translation=${get.translation(displayGroup)}`);
-			this.node.identity.firstChild.innerHTML = get.translation(displayGroup);
+			// 野心家显示"野"
+			if (isYeIdentity(identity)) {
+				this.node.identity.firstChild.innerHTML = "野";
+			} else {
+				// 优先显示 group（支持双势力如 "shu_wei"），其次显示 identity
+				const displayGroup = this.group && this.group !== "unknown" ? this.group : identity;
+				console.log(`[setIdentity] displayGroup=${displayGroup}, translation=${get.translation(displayGroup)}`);
+				this.node.identity.firstChild.innerHTML = get.translation(displayGroup);
+			}
 		}
 		// 对于 "x_ye" 格式的野心家身份，颜色使用 "ye"
 		let color = nature || identity;
@@ -869,6 +943,34 @@ export class PlayerGuozhan extends Player {
 	}
 
 	/**
+	 * 替换武将牌
+	 * 
+	 * @param { number } num - 替换哪张武将牌，`0`为主将，`1`为副将
+	 * @param { string } characterName - 替换成的武将名称
+	 * @param { boolean } [hidden] - 是否暗置替换后的武将
+	 * @returns { GameEvent | undefined }
+	 */
+	replaceCharacter(num, characterName, hidden) {
+		if (!lib.character[characterName]) {
+			console.warn(`replaceCharacter: 武将 "${characterName}" 不存在`);
+			return;
+		}
+		var next = game.createEvent("replaceCharacter");
+		// @ts-expect-error 类型就是这么写的
+		next.player = this;
+		next.num = num;
+		// @ts-expect-error 类型就是这么写的
+		next.characterName = characterName;
+		if (hidden) {
+			// @ts-expect-error 类型就是这么写的
+			next.hidden = true;
+		}
+		// @ts-expect-error 类型就是这么写的
+		next.setContent("replaceCharacter");
+		return next;
+	}
+
+	/**
 	 * 变更副将
 	 *
 	 * @param { boolean } [hidden] 是否暗置变更后的副将
@@ -979,6 +1081,8 @@ export class PlayerGuozhan extends Player {
 		// 武将明置状态更新后，再计算势力
 		if (this.identity == "unknown" || (num == 0 || num == 2) && lib.character[this.name1][1] == "ye" || this._viceGroupTemp) {
 			// 使用 recalculateIdentity 统一处理势力计算（包括双势力野心家判断）
+			// numOfReadyToShow = 0：因为上面已经更新了明置状态（classList.remove），
+			// 所以当前明置的武将已经被 population 统计进去了，不需要再 +1
 			this.recalculateIdentity();
 			
 			// 检查是否需要显示野心家动画
@@ -1105,13 +1209,28 @@ export class PlayerGuozhan extends Player {
 	}
 
 	/**
+         * 记录对某势力暴露野心
+         * 一旦记录，除非完全暗置或暗置主将后副将不包含此势力，否则无法回归该势力
+         * 
+         * @param { string } group 暴露野心的势力
+         */
+        exposeYeToGroup(group) {
+                if (!this._exposedYeGroups) {
+                        this._exposedYeGroups = [];
+                }
+                if (!this._exposedYeGroups.includes(group)) {
+                        this._exposedYeGroups.push(group);
+                        console.log(`[exposeYeToGroup] 记录对 ${group} 势力暴露野心，当前记录: [${this._exposedYeGroups.join(", ")}]`);
+                }
+        }
+
+        /**
 	 * 玩家是否“不会”变成野心家
 	 *
 	 * @param { string } [group] 判断所处的势力
-	 * @param { number } [numOfReadyToShow] 预亮角色数，默认为1（自己）
 	 * @returns { boolean }
 	 */
-	wontYe(group, numOfReadyToShow) {
+	wontYe(group) {
 		if (!group) {
 			if (this.trueIdentity) {
 				group = this.trueIdentity;
@@ -1126,20 +1245,24 @@ export class PlayerGuozhan extends Player {
 		if (get.zhu(this, null, group)) {
 			return true;
 		}
-		if (!numOfReadyToShow) {
-			numOfReadyToShow = 1;
-		}
 		
-		// 计算阈值：游戏人数除以2，向下取整
+		// 检查是否曾经对此势力暴露过野心
+                // 一旦对某势力暴露野心，除非完全暗置或暗置主将后副将不包含此势力，否则无法回归
+                if (this._exposedYeGroups && this._exposedYeGroups.includes(group)) {
+                        console.log(`[wontYe] 玩家曾对 ${group} 势力暴露野心，无法回归`);
+                        return false;
+                }
+
+                // 计算阈值：游戏人数除以2，向下取整
 		const threshold = Math.floor(get.population() / 2);
 		
 		// 使用支持双势力的人口计算函数
-		// 注意：这里使用 totalPopulation 的逻辑（包含死亡角色）
+		// populationOf 基于明置状态计算，无需手动加减
 		const currentPopulation = typeof get.populationOf === "function" 
 			? get.populationOf(group, true)  // includeDead = true
 			: get.totalPopulation(group);    // 降级处理
 		
-		return currentPopulation + numOfReadyToShow <= threshold;
+		return currentPopulation <= threshold;
 	}
 
 	/**

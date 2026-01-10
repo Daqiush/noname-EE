@@ -8,6 +8,294 @@ const get = cast(_get);
 
 /** @type {Record<string, Skill>} */
 export default {
+	
+	/*----分界线----*/
+	_viewnext: {
+		trigger: {
+			global: "gameDrawBefore",
+		},
+		silent: true,
+		popup: false,
+		forced: true,
+		filter() {
+			if (_status.connectMode && !lib.configOL.viewnext) {
+				return false;
+			} else if (!_status.connectMode && !get.config("viewnext")) {
+				return false;
+			}
+			return game.players.length > 1;
+		},
+		content() {
+			var target = player.getNext();
+			player.viewCharacter(target, 1);
+		},
+	},
+	_aozhan_judge: {
+		trigger: {
+			player: "phaseBefore",
+		},
+		forced: true,
+		priority: 22,
+		filter(event, player) {
+			if (get.mode() != "guozhan") {
+				return false;
+			}
+			if (_status.connectMode && !lib.configOL.aozhan) {
+				return false;
+			} else if (!_status.connectMode && !get.config("aozhan")) {
+				return false;
+			}
+			if (_status._aozhan) {
+				return false;
+			}
+			if (game.players.length > 4) {
+				return false;
+			}
+			if (game.players.length > 3 && game.players.length + game.dead.length <= 7) {
+				return false;
+			}
+			for (var i = 0; i < game.players.length; i++) {
+				for (var j = i + 1; j < game.players.length; j++) {
+					if (game.players[i].isFriendOf(game.players[j])) {
+						return false;
+					}
+				}
+			}
+			return true;
+		},
+		content() {
+			var color = get.groupnature(player.group, "raw");
+			if (player.isUnseen()) {
+				color = "fire";
+			}
+			player.$fullscreenpop("鏖战模式", color);
+			game.broadcastAll(function () {
+				_status._aozhan = true;
+				ui.aozhan = ui.create.div(".touchinfo.left", ui.window);
+				ui.aozhan.innerHTML = "鏖战模式";
+				if (ui.time3) {
+					ui.time3.style.display = "none";
+				}
+				ui.aozhanInfo = ui.create.system("鏖战模式", null, true);
+				lib.setPopped(
+					ui.aozhanInfo,
+					function () {
+						var uiintro = ui.create.dialog("hidden");
+						uiintro.add("鏖战模式");
+						var list = ["当游戏中仅剩四名或更少角色时（七人以下游戏时改为三名或更少），若此时全场没有超过一名势力相同的角色，则从一个新的回合开始，游戏进入鏖战模式直至游戏结束。", "在鏖战模式下，任何角色均不是非转化的【桃】的合法目标。【桃】可以被当做【杀】或【闪】使用或打出。", "进入鏖战模式后，即使之后有两名或者更多势力相同的角色出现，仍然不会取消鏖战模式。"];
+						var intro = '<ul style="text-align:left;margin-top:0;width:450px">';
+						for (var i = 0; i < list.length; i++) {
+							intro += "<li>" + list[i];
+						}
+						intro += "</ul>";
+						uiintro.add('<div class="text center">' + intro + "</div>");
+						var ul = uiintro.querySelector("ul");
+						if (ul) {
+							ul.style.width = "180px";
+						}
+						uiintro.add(ui.create.div(".placeholder"));
+						return uiintro;
+					},
+					250
+				);
+				game.playBackgroundMusic();
+				lib.init.sheet(`
+					.card[data-card-name = "tao"]>.image {
+						background-image: url(${lib.assetURL}image/card/gz_aozhantao.png) !important;
+					}
+				`);
+			});
+			game.addGlobalSkill("aozhan");
+		},
+	},
+	_guozhan_marks: {
+		ruleSkill: true,
+		enable: "phaseUse",
+		filter(event, player) {
+			return ["yexinjia", "xianqu", "yinyang", "zhulianbihe"].some(mark => player.hasMark(`${mark}_mark`));
+		},
+		chooseButton: {
+			dialog(event, player) {
+				return ui.create.dialog("###国战标记###弃置一枚对应的标记，发动其对应的效果");
+			},
+			chooseControl(event, player) {
+				const list = [],
+					bool = player.hasMark("yexinjia_mark");
+				if (bool || player.hasMark("xianqu_mark")) {
+					list.push("先驱");
+				}
+				if (bool || player.hasMark("zhulianbihe_mark")) {
+					list.push("珠联(摸牌)");
+					if (event.filterCard({ name: "tao", isCard: true }, player, event)) {
+						list.push("珠联(桃)");
+					}
+				}
+				if (bool || player.hasMark("yinyang_mark")) {
+					list.push("阴阳鱼");
+				}
+				list.push("cancel2");
+				return list;
+			},
+			check() {
+				const player = get.player(),
+					bool = player.hasMark("yexinjia_mark"),
+					evt = get.event().getParent();
+				if ((bool || player.hasMark("xianqu_mark")) && 4 - player.countCards("h") > 1) {
+					return "先驱";
+				}
+				if (bool || player.hasMark("zhulianbihe_mark")) {
+					if (evt.filterCard({ name: "tao", isCard: true }, player, evt) && get.effect_use(player, { name: "tao" }, player) > 0) {
+						return "珠联(桃)";
+					}
+					if (
+						player.getHandcardLimit() - player.countCards("h") > 1 &&
+						!game.hasPlayer(function (current) {
+							return current != player && current.isFriendOf(player) && current.hp + current.countCards("h", "shan") <= 2;
+						})
+					) {
+						return "珠联(摸牌)";
+					}
+				}
+				if (player.hasMark("yinyang_mark") && player.getHandcardLimit() - player.countCards("h") > 0) {
+					return "阴阳鱼";
+				}
+				return "cancel2";
+			},
+			backup(result, player) {
+				switch (result.control) {
+					case "珠联(桃)":
+						return get.copy(lib.skill._zhulianbihe_mark_tao);
+					case "珠联(摸牌)":
+						return {
+							async content(event, trigger, player) {
+								await player.draw(2);
+								player.removeMark(player.hasMark("zhulianbihe_mark") ? "zhulianbihe_mark" : "yexinjia_mark", 1);
+							},
+						};
+					case "阴阳鱼":
+						return {
+							async content(event, trigger, player) {
+								await player.draw();
+								player.removeMark(player.hasMark("yinyang_mark") ? "yinyang_mark" : "yexinjia_mark", 1);
+							},
+						};
+					case "先驱":
+						return { content: lib.skill.xianqu_mark.content };
+				}
+			},
+		},
+		ai: {
+			order: 1,
+			result: { player: 1 },
+		},
+	},
+	xianqu_mark: {
+		intro: { content: "◇出牌阶段，你可以弃置此标记，然后将手牌摸至四张并观看一名其他角色的一张武将牌。" },
+		async content(event, trigger, player) {
+			player.removeMark(player.hasMark("xianqu_mark") ? "xianqu_mark" : "yexinjia_mark", 1);
+			await player.drawTo(4);
+			if (
+				game.hasPlayer(current => {
+					return current != player && current.isUnseen(2);
+				})
+			) {
+				let result = await player
+					.chooseTarget("是否观看一名其他角色的一张暗置武将牌？", (card, player, target) => {
+						return target != player && target.isUnseen(2);
+					})
+					.set("ai", target => {
+						const player = get.player();
+						if (target.isUnseen()) {
+							const next = player.getNext();
+							if (target != next) {
+								return 10;
+							}
+							return 9;
+						}
+						return -get.attitude(player, target);
+					})
+					.forResult();
+				if (result?.bool && result?.targets?.length) {
+					const [target] = result.targets;
+					const controls = [];
+					if (target.isUnseen(0)) {
+						controls.push("主将");
+					}
+					if (target.isUnseen(1)) {
+						controls.push("副将");
+					}
+					if (!controls.length) {
+						return;
+					}
+					player.line(target, "green");
+					result = controls.length == 1 ? { control: controls[0] } : await player.chooseControl(controls).forResult();
+					if (!result?.control) {
+						return;
+					}
+					await player.viewCharacter(target, result.control == "主将" ? 0 : 1);
+				} else {
+					player.removeSkill("xianqu_mark");
+				}
+			}
+		},
+	},
+	zhulianbihe_mark: {
+		intro: { content: "◇出牌阶段，你可以弃置此标记，然后摸两张牌。<br>◇你可以将此标记当做【桃】使用。" },
+	},
+	yinyang_mark: {
+		intro: { content: "◇出牌阶段，你可以弃置此标记，然后摸一张牌。<br>◇弃牌阶段，你可以弃置此标记，然后本回合手牌上限+2。" },
+	},
+	_zhulianbihe_mark_tao: {
+		ruleSkill: true,
+		enable: "chooseToUse",
+		viewAsFilter(player) {
+			return ["yexinjia_mark", "zhulianbihe_mark"].some(mark => player.hasMark(mark));
+		},
+		viewAs: {
+			name: "tao",
+			isCard: true,
+		},
+		filterCard: () => false,
+		selectCard: -1,
+		async precontent(event, trigger, player) {
+			player.removeMark(player.hasMark("zhulianbihe_mark") ? "zhulianbihe_mark" : "yexinjia_mark", 1);
+		},
+	},
+	_yinyang_mark_add: {
+		ruleSkill: true,
+		trigger: { player: "phaseDiscardBegin" },
+		filter(event, player) {
+			return ["yexinjia_mark", "yinyang_mark"].some(mark => player.hasMark(mark)) && player.needsToDiscard();
+		},
+		prompt(event, player) {
+			return `是否弃置一枚【${player.hasMark("yinyang_mark") ? "阴阳鱼" : "野心家"}】标记，使本回合的手牌上限+2？`;
+		},
+		async content(event, trigger, player) {
+			player.addTempSkill("yinyang_add", "phaseAfter");
+			player.removeMark(player.hasMark("yinyang_mark") ? "yinyang_mark" : "yexinjia_mark", 1);
+		},
+	},
+	yinyang_add: {
+		charlotte: true,
+		mod: {
+			maxHandcard(player, num) {
+				return num + 2;
+			},
+		},
+	},
+	yexinjia_mark: {
+		intro: {
+			content: "◇你可以弃置此标记，并发动【先驱】标记或【珠联璧合】标记或【阴阳鱼】标记的效果。",
+		},
+	},
+	yexinjia_friend: {
+		marktext: "盟",
+		intro: {
+			name: "结盟",
+			content: "已经与$结成联盟",
+		},
+	},
+	/*----分界线----*/
 	_mingzhi1: {
 		trigger: { player: "phaseBeginStart" },
 		//priority:19,
@@ -464,7 +752,7 @@ export default {
 			},
 		},
 	},
-		_hezong: {
+	_hezong: {
 		mode: ["guozhan_ee"],
 		enable: "phaseUse",
 		usable: 1,

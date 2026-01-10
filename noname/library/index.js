@@ -11630,7 +11630,7 @@ export class Library {
 			}
 			if (!game.expandSkills(player.getSkills(false).concat(lib.skill.global)).includes(skill)) {
 				//hiddenSkills
-				if (get.mode() != "guozhan") {
+				if (get.mode() != "guozhan" && get.mode() != "guozhan_ee") {
 					return false;
 				}
 				if (info.noHidden) {
@@ -11727,7 +11727,7 @@ export class Library {
 				if (player.hasSkillTag("nomingzhi", false, null, true)) {
 					return false;
 				}
-				if (get.mode() !== "guozhan") {
+				if (get.mode() !== "guozhan" && get.mode() !== "guozhan_ee") {
 					return false;
 				}
 				if (info.noHidden) {

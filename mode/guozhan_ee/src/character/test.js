@@ -24,12 +24,12 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["gz_daqiush2_kill"],
+		skills: ["gz_daqiush_kill", "gz_daqiush_hide", "gz_daqiush_show", "gz_daqiush_infect"],
 		minorSecondGroup: "wei",
 	}),
 	gz_daqiush3: new Character({
 		sex: "male",
-		group: "shu",
+		group: "han",
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
@@ -37,7 +37,7 @@ export default {
 	}),
 	gz_daqiush4: new Character({
 		sex: "male",
-		group: "shu",
+		group: "han",
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
@@ -45,7 +45,7 @@ export default {
 	}),
 	gz_daqiush5: new Character({
 		sex: "male",
-		group: "shu",
+		group: "han",
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
@@ -53,7 +53,7 @@ export default {
 	}),
 	gz_daqiush6: new Character({
 		sex: "male",
-		group: "shu",
+		group: "han",
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
@@ -61,7 +61,7 @@ export default {
 	}),
 	gz_daqiush7: new Character({
 		sex: "male",
-		group: "shu",
+		group: "han",
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
@@ -69,7 +69,7 @@ export default {
 	}),
 	gz_daqiush8: new Character({
 		sex: "male",
-		group: "shu",
+		group: "han",
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
@@ -77,7 +77,7 @@ export default {
 	}),
 	gz_daqiush9: new Character({
 		sex: "male",
-		group: "shu",
+		group: "han",
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
@@ -85,7 +85,7 @@ export default {
 	}),
 	gz_daqiush10: new Character({
 		sex: "male",
-		group: "shu",
+		group: "han",
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
@@ -161,7 +161,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["gz_daqiush2_kill"],
+		skills: ["gz_daqiush_kill", "gz_daqiush_hide", "gz_daqiush_show", "gz_daqiush_infect"],
 		minorSecondGroup: "shu",
 	}),
 };

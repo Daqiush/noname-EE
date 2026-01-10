@@ -1720,6 +1720,66 @@ export const transCharacter = async (event, _trigger, player) => {
 }
 
 /**
+ * 替换武将牌
+ * 
+ * @param {GameEvent} event
+ * @param {GameEvent} _trigger
+ * @param {Player} player
+ */
+export const replaceCharacter = async (event, _trigger, player) => {
+	const { num, characterName, hidden } = event;
+	const oldName = player["name" + (num + 1)];
+	
+	if (!lib.character[characterName]) {
+		console.warn(`replaceCharacter: 武将 "${characterName}" 不存在`);
+		return;
+	}
+	
+	// 将旧武将放回武将牌堆
+	// @ts-expect-error 类型就是这么写的
+	if (oldName && oldName.indexOf("gz_shibing") !== 0 && _status.characterlist) {
+		// @ts-expect-error 类型就是这么写的
+		_status.characterlist.add(oldName);
+	}
+	
+	// 从武将牌堆移除新武将
+	// @ts-expect-error 类型就是这么写的
+	if (_status.characterlist) {
+		// @ts-expect-error 类型就是这么写的
+		_status.characterlist.remove(characterName);
+	}
+	
+	// 触发移除武将前事件
+	if (oldName && oldName.indexOf("gz_shibing") !== 0) {
+		event.trigger("removeCharacterBefore");
+	}
+	
+	// 记录日志
+	if (hidden) {
+		game.log(player, "替换了" + (num ? "副将" : "主将"), "#g" + get.translation(oldName));
+	} else {
+		game.log(player, "将" + (num ? "副将" : "主将") + "从", "#g" + get.translation(oldName), "变更为", "#g" + get.translation(characterName));
+	}
+	
+	// 执行武将替换
+	await player.reinitCharacter(oldName, characterName, false);
+	
+	// 如果需要暗置
+	if (hidden) {
+		if (!player.isUnseen(num)) {
+			// hideCharacter 内部会调用 recalculateIdentity()，无需再次调用
+			await player.hideCharacter(num, false);
+		}
+	} else {
+		// 不暗置时，武将已经是明置状态，重新计算势力
+		// numOfReadyToShow=0 表示不是新增明置，而是替换后的状态
+		if (typeof player.recalculateIdentity === "function") {
+			player.recalculateIdentity();
+		}
+	}
+}
+
+/**
  *
  * @param {GameEvent} _event
  * @param {GameEvent} _trigger
@@ -1734,6 +1794,7 @@ export const zhulian = async (_event, _trigger, player) => {
 
 export default {
 	hideCharacter,
+	replaceCharacter,
 	chooseJunlingFor,
 	chooseJunlingControl,
 	carryOutJunling,

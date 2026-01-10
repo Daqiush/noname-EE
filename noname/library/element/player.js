@@ -12295,7 +12295,8 @@ export class Player extends HTMLDivElement {
 		if (lib.skill.global.includes(skill)) {
 			return false;
 		}
-		if (get.mode() != "guozhan" || game.expandSkills(this.getSkills()).includes(skill)) {
+		var mode = get.mode();
+		if ((mode != "guozhan" && mode != "guozhan_ee") || game.expandSkills(this.getSkills()).includes(skill)) {
 			if (showonly) {
 				return false;
 			} else {
