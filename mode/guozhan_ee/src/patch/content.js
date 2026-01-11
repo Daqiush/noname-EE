@@ -15,6 +15,93 @@ const get = _get;
 const html = String.raw;
 
 /**
+ * 判断武将是否可作为主将
+ * @param {string} name - 武将名称
+ * @returns {boolean}
+ */
+function canBeMain(name) {
+	const info = get.character(name);
+	if (!info) return false;
+	// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
+	if (info.majorSecondGroup || info.group === "han") return false;
+	return true;
+}
+
+/**
+ * 获取武将作为副将时的有效势力列表
+ * @param {string} name - 武将名称
+ * @returns {string[]}
+ */
+function getViceGroups(name) {
+	const info = get.character(name);
+	if (!info) return [];
+	const groups = [info.group];
+	// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
+	if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
+	if (info.minorSecondGroup) groups.push(info.minorSecondGroup);
+	return groups;
+}
+
+/**
+ * 判断两个武将是否可以组成合法的主副将组合
+ * @param {string} name1 - 主将名称
+ * @param {string} name2 - 副将名称
+ * @returns {boolean}
+ */
+function isValidCharacterPair(name1, name2) {
+	// @ts-expect-error 祖宗之法就是这么写的
+	if (_status.separatism) {
+		return true;
+	}
+	// name1 为主将，name2 为副将
+	// 检查主将是否可作为主将
+	if (!canBeMain(name1)) return false;
+	const info1 = get.character(name1);
+	const info2 = get.character(name2);
+	if (!info1 || !info2) return false;
+	const group1 = info1.group;
+	const group2 = info2.group;
+	// han 势力作为副将可搭配任何主将
+	if (group2 === "han") return true;
+	// 获取副将的有效势力列表
+	const viceGroups = getViceGroups(name2);
+	// 检查主将势力是否在副将有效势力中
+	if (viceGroups.includes(group1)) return true;
+	// 处理主将的 doubleGroup 情况
+	// @ts-expect-error 祖宗之法就是这么写的
+	const doublex = get.is.double(name1, true);
+	if (doublex && Array.isArray(doublex)) {
+		return doublex.some(g => viceGroups.includes(g));
+	}
+	// 处理原有的野心家/神等特殊势力
+	if (group1 === "ye" || lib.selectGroup.includes(group1)) {
+		return group2 !== "ye";
+	}
+	if (lib.selectGroup.includes(group2)) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * 检查一组武将是否存在合法的主副将组合
+ * @param {string[]} chooseList - 可选武将列表
+ * @returns {boolean} - 是否存在合法组合
+ */
+function hasValidCharacterPair(chooseList) {
+	for (let i = 0; i < chooseList.length; i++) {
+		for (let j = 0; j < chooseList.length; j++) {
+			if (i !== j) {
+				if (isValidCharacterPair(chooseList[i], chooseList[j])) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+/**
  * @param {GameEvent} event
  * @param {GameEvent} _trigger
  * @param {Player} _player
@@ -73,6 +160,19 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 		chooseList = _status.brawl.chooseCharacter(characterList, game.me);
 	} else {
 		chooseList = game.getCharacterChoice(characterList, parseInt(get.config("choice_num")));
+	}
+
+	// 合法性检查：如果当前发的将没有合法组合，重新发将
+	while (!hasValidCharacterPair(chooseList)) {
+		// 将当前选将放回池子
+		characterList.push(...chooseList);
+		characterList.randomSort();
+		// 重新发将
+		if (_status.brawl && _status.brawl.chooseCharacter) {
+			chooseList = _status.brawl.chooseCharacter(characterList, game.me);
+		} else {
+			chooseList = game.getCharacterChoice(characterList, parseInt(get.config("choice_num")));
+		}
 	}
 
 	// 如果托管，则自动选择
@@ -181,7 +281,16 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 
 	for (const player of game.players) {
 		if (player != game.me) {
-			event.ai?.(player, game.getCharacterChoice(characterList, parseInt(get.config("choice_num"))), characterList);
+			// 为 AI 玩家发将，并进行合法性检查
+			let aiChooseList = game.getCharacterChoice(characterList, parseInt(get.config("choice_num")));
+			while (!hasValidCharacterPair(aiChooseList)) {
+				// 将当前选将放回池子
+				characterList.push(...aiChooseList);
+				characterList.randomSort();
+				// 重新发将
+				aiChooseList = game.getCharacterChoice(characterList, parseInt(get.config("choice_num")));
+			}
+			event.ai?.(player, aiChooseList, characterList);
 		}
 	}
 
@@ -573,6 +682,12 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 			characterList.randomSort();
 			// list=event.list.splice(0,parseInt(get.config('choice_num')));
 			chooseList = game.getCharacterChoice(characterList, parseInt(get.config("choice_num")));
+			// 合法性检查：如果更换后没有合法组合，继续重新发将
+			while (!hasValidCharacterPair(chooseList)) {
+				characterList.push(...chooseList);
+				characterList.randomSort();
+				chooseList = game.getCharacterChoice(characterList, parseInt(get.config("choice_num")));
+			}
 			var buttons = ui.create.div(".buttons");
 			// @ts-expect-error 祖宗之法就是这么写的
 			var node = _status.event.dialog.buttons[0].parentNode;
@@ -624,8 +739,40 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 	}
 
 	characterList.randomSort();
-	for (const player of game.players) {
-		list2.push([player, ["选择角色", [game.getCharacterChoice(characterList, num), "character"]], 2, true, () => Math.random(), filterButton]);
+
+	// 为所有玩家发将，并进行合法性检查
+	/** @type {string[][]} */
+	let playerChooseLists = [];
+	let allValid = false;
+
+	while (!allValid) {
+		// 重置
+		playerChooseLists = [];
+		const tempCharacterList = characterList.slice(0);
+		tempCharacterList.randomSort();
+
+		// 为每个玩家发将
+		for (const player of game.players) {
+			const chooseList = game.getCharacterChoice(tempCharacterList, num);
+			playerChooseLists.push(chooseList);
+		}
+
+		// 检查是否所有玩家都有合法组合
+		allValid = playerChooseLists.every(chooseList => hasValidCharacterPair(chooseList));
+	}
+
+	// 重置 characterList 并使用已验证的发将结果
+	characterList.length = 0;
+	for (const chooseList of playerChooseLists) {
+		for (const char of chooseList) {
+			if (!characterList.includes(char)) {
+				characterList.push(char);
+			}
+		}
+	}
+
+	for (let i = 0; i < game.players.length; i++) {
+		list2.push([game.players[i], ["选择角色", [playerChooseLists[i], "character"]], 2, true, () => Math.random(), filterButton]);
 	}
 
 	const next = game.me.chooseButtonOL(
@@ -836,36 +983,57 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 				}
 			}
 		}
+		// 判断武将是否可作为主将
+		const canBeMain = (name) => {
+			const info = get.character(name);
+			if (!info) return false;
+			// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
+			if (info.majorSecondGroup || info.group === "han") return false;
+			return true;
+		};
+		// 获取武将作为副将时的有效势力列表
+		const getViceGroups = (name) => {
+			const info = get.character(name);
+			if (!info) return [];
+			const groups = [info.group];
+			// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
+			if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
+			if (info.minorSecondGroup) groups.push(info.minorSecondGroup);
+			return groups;
+		};
 		const filterChoice = (name1, name2) => {
 			// @ts-expect-error 祖宗之法就是这么写的
 			if (_status.separatism) {
 				return true;
 			}
-			const group1 = lib.character[name1][1];
-			const group2 = lib.character[name2][1];
+			// name1 为主将，name2 为副将
+			// 检查主将是否可作为主将
+			if (!canBeMain(name1)) return false;
+			const info1 = get.character(name1);
+			const info2 = get.character(name2);
+			if (!info1 || !info2) return false;
+			const group1 = info1.group;
+			const group2 = info2.group;
+			// han 势力作为副将可搭配任何主将
+			if (group2 === "han") return true;
+			// 获取副将的有效势力列表
+			const viceGroups = getViceGroups(name2);
+			// 检查主将势力是否在副将有效势力中
+			if (viceGroups.includes(group1)) return true;
+			// 处理主将的 doubleGroup 情况
 			// @ts-expect-error 祖宗之法就是这么写的
 			const doublex = get.is.double(name1, true);
-			if (doublex) {
-				// @ts-expect-error 祖宗之法就是这么写的
-				const double = get.is.double(name2, true);
-				// @ts-expect-error 祖宗之法就是这么写的
-				if (double) {
-					return doublex.some(group => double.includes(group));
-				}
-				// @ts-expect-error 祖宗之法就是这么写的
-				return doublex.includes(group2) || lib.selectGroup.includes(group2);
-			} else {
-				if (group1 === "ye" || lib.selectGroup.includes(group1)) {
-					return group2 !== "ye";
-				}
-				// @ts-expect-error 祖宗之法就是这么写的
-				const double = get.is.double(name2, true);
-				// @ts-expect-error 祖宗之法就是这么写的
-				if (double) {
-					return double.includes(group1);
-				}
-				return group1 === group2 || lib.selectGroup.includes(group2);
+			if (doublex && Array.isArray(doublex)) {
+				return doublex.some(g => viceGroups.includes(g));
 			}
+			// 处理原有的野心家/神等特殊势力
+			if (group1 === "ye" || lib.selectGroup.includes(group1)) {
+				return group2 !== "ye";
+			}
+			if (lib.selectGroup.includes(group2)) {
+				return true;
+			}
+			return false;
 		};
 		if (!ui.selected.buttons.length) {
 			return ui.dialog.buttons.some(but => {
@@ -884,36 +1052,57 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 		// @ts-expect-error 祖宗之法就是这么写的
 		const buttons = _status.event.dialog.buttons;
 
+		// 判断武将是否可作为主将
+		const canBeMain = (name) => {
+			const info = get.character(name);
+			if (!info) return false;
+			// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
+			if (info.majorSecondGroup || info.group === "han") return false;
+			return true;
+		};
+		// 获取武将作为副将时的有效势力列表
+		const getViceGroups = (name) => {
+			const info = get.character(name);
+			if (!info) return [];
+			const groups = [info.group];
+			// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
+			if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
+			if (info.minorSecondGroup) groups.push(info.minorSecondGroup);
+			return groups;
+		};
 		const filterChoice = (name1, name2) => {
 			// @ts-expect-error 祖宗之法就是这么写的
 			if (_status.separatism) {
 				return true;
 			}
-			const group1 = lib.character[name1][1];
-			const group2 = lib.character[name2][1];
+			// name1 为主将，name2 为副将
+			// 检查主将是否可作为主将
+			if (!canBeMain(name1)) return false;
+			const info1 = get.character(name1);
+			const info2 = get.character(name2);
+			if (!info1 || !info2) return false;
+			const group1 = info1.group;
+			const group2 = info2.group;
+			// han 势力作为副将可搭配任何主将
+			if (group2 === "han") return true;
+			// 获取副将的有效势力列表
+			const viceGroups = getViceGroups(name2);
+			// 检查主将势力是否在副将有效势力中
+			if (viceGroups.includes(group1)) return true;
+			// 处理主将的 doubleGroup 情况
 			// @ts-expect-error 祖宗之法就是这么写的
 			const doublex = get.is.double(name1, true);
-			if (doublex) {
-				// @ts-expect-error 祖宗之法就是这么写的
-				const double = get.is.double(name2, true);
-				// @ts-expect-error 祖宗之法就是这么写的
-				if (double) {
-					return doublex.some(group => double.includes(group));
-				}
-				// @ts-expect-error 祖宗之法就是这么写的
-				return doublex.includes(group2) || lib.selectGroup.includes(group2);
-			} else {
-				if (group1 === "ye" || lib.selectGroup.includes(group1)) {
-					return group2 !== "ye";
-				}
-				// @ts-expect-error 祖宗之法就是这么写的
-				const double = get.is.double(name2, true);
-				// @ts-expect-error 祖宗之法就是这么写的
-				if (double) {
-					return double.includes(group1);
-				}
-				return group1 === group2 || lib.selectGroup.includes(group2);
+			if (doublex && Array.isArray(doublex)) {
+				return doublex.some(g => viceGroups.includes(g));
 			}
+			// 处理原有的野心家/神等特殊势力
+			if (group1 === "ye" || lib.selectGroup.includes(group1)) {
+				return group2 !== "ye";
+			}
+			if (lib.selectGroup.includes(group2)) {
+				return true;
+			}
+			return false;
 		};
 
 		for (let i = 0; i < buttons.length - 1; ++i) {
