@@ -102,4 +102,56 @@ export default {
 			},
 		},
 	},
+	
+	// 技能A：初始禁用，需要被其他技能激活
+	gz_daqiush_controlled: {
+	    enabledByDefault: false,  // 初始状态为禁用
+	    enable: "phaseUse",
+		usable: 10000,
+	    content: function () {
+	        player.draw(2);
+	    },
+		ai: {
+			// 确保AI不会使用此技能
+			order: 0,
+			result: {
+				target: 0,
+			},
+		},
+	},
+	
+	// 技能B：可以使能技能A的使能位
+	gz_daqiush_enable: {
+	    enable: "phaseUse",
+	    usable: 10000,
+	    content: function () {
+	        // 启用技能A
+	        player.enableSkillBit("gz_daqiush_controlled");
+	    },
+		ai: {
+			// 确保AI不会使用此技能
+			order: 0,
+			result: {
+				target: 0,
+			},
+		},
+	},
+	
+	
+	// 技能C：可以失能技能A的使能位
+	gz_daqiush_disable: {
+	    enable: "phaseUse",
+		usable: 10000,
+	    content: function () {
+	        // 失能技能A
+	        player.disableSkillBit("gz_daqiush_controlled");
+	    },
+		ai: {
+			// 确保AI不会使用此技能
+			order: 0,
+			result: {
+				target: 0,
+			},
+		},
+	},
 };

@@ -636,7 +636,9 @@ export default {
 				next.fromGroups = [player.identity];
 				next.toGroup = newGroup;
 				next.setContent("emptyEvent");
-				game.log(player, "变更了势力为", `<span data-nature=${get.groupnature(newGroup, "raw")}m>${get.translation(newGroup)}</span>`);
+				// 使用安全名称，不暴露未明置的武将信息
+				const safeName = player.getSafeName ? player.getSafeName() : get.translation(player);
+				game.log(`#b${safeName}`, "变更了势力为", `<span data-nature=${get.groupnature(newGroup, "raw")}m>${get.translation(newGroup)}</span>`);
 				game.broadcastAll(
 					function (player, group) {
 						player.identity = group;
@@ -839,5 +841,67 @@ export default {
 				},
 			},
 		},
-	}
+	},
+	
+	/*----分界线----*/
+	/*
+	 * ==================== 技能使能位机制使用说明 ====================
+	 * 
+	 * 技能使能位（Skill Enable Bit）是黄金国战模式新增的机制，
+	 * 允许技能控制自身或其他技能的有效性。
+	 * 
+	 * 【基本概念】
+	 * - 每个技能可以有一个使能位，控制该技能是否有效
+	 * - 使能位为 false 时，技能无效（类似 tempBanSkill，但可由技能控制）
+	 * - 使能位为 true 或未设置时，技能正常生效
+	 * 
+	 * 【技能定义中的初始状态】
+	 * 在技能定义中添加 enabledByDefault 属性来设置初始状态：
+	 * - enabledByDefault: true  - 默认启用（默认值，可省略）
+	 * - enabledByDefault: false - 默认禁用
+	 * 
+	 * 【可用的 Player 方法】
+	 * - player.setSkillEnabled(skill, enabled, log) - 设置技能使能位
+	 * - player.enableSkillBit(skill, log)  - 启用技能
+	 * - player.disableSkillBit(skill, log) - 禁用技能
+	 * - player.isSkillEnabled(skill)       - 检查技能使能位状态
+	 * - player.toggleSkillBit(skill, log)  - 切换技能使能位状态
+	 * - player.resetSkillBit(skill, log)   - 重置为初始状态
+	 * - player.getDisabledSkillBits()      - 获取所有被禁用的技能列表
+	 * 
+	 * 【示例技能定义】
+	 * 
+	 * // 技能A：初始禁用，需要被其他技能激活
+	 * skillA: {
+	 *     enabledByDefault: false,  // 初始状态为禁用
+	 *     trigger: { player: "phaseBegin" },
+	 *     content() {
+	 *         player.draw(2);
+	 *     },
+	 * },
+	 * 
+	 * // 技能B：可以控制技能A的使能位
+	 * skillB: {
+	 *     trigger: { player: "damageEnd" },
+	 *     content() {
+	 *         // 启用技能A
+	 *         player.enableSkillBit("skillA");
+	 *         // 或者禁用自身
+	 *         player.disableSkillBit("skillB");
+	 *     },
+	 * },
+	 * 
+	 * // 技能C：切换另一个技能的状态
+	 * skillC: {
+	 *     enable: "phaseUse",
+	 *     usable: 1,
+	 *     filterTarget: true,
+	 *     content() {
+	 *         // 切换目标的某个技能的使能位
+	 *         target.toggleSkillBit("someSkill");
+	 *     },
+	 * },
+	 * 
+	 * ==================== 技能使能位机制使用说明结束 ====================
+	 */
 }

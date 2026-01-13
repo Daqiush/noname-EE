@@ -15,6 +15,36 @@ export class GameGuozhan extends Game {
 	}
 
 	/**
+	 * 过滤技能列表，移除被禁用的技能和使能位为 false 的技能
+	 * 
+	 * 继承自父类并增加了使能位检查
+	 * 
+	 * @param {string[]} skills - 技能列表
+	 * @param {import("../../../../noname/library/element/player.js").Player} player - 玩家
+	 * @param {string[]} [exclude] - 排除的技能列表
+	 * @returns {string[]} 过滤后的技能列表
+	 */
+	filterSkills(skills, player, exclude) {
+		// 先调用父类的过滤逻辑
+		const out = super.filterSkills(skills, player, exclude || []);
+		
+		// 再过滤掉使能位为 false 的技能
+		// @ts-expect-error player 可能是 PlayerGuozhan
+		if (typeof player.isSkillEnabled === 'function') {
+			return out.filter(skill => {
+				// 排除列表中的技能不过滤
+				if (exclude && exclude.includes(skill)) {
+					return true;
+				}
+				// @ts-expect-error player 可能是 PlayerGuozhan
+				return player.isSkillEnabled(skill);
+			});
+		}
+		
+		return out;
+	}
+
+	/**
 	 * 当野心家未明置主将，且场上只剩副将所属阵容时，野心家可明置主将，并进行”拉拢人心“
 	 *
 	 * 详情请参阅规则集

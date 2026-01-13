@@ -15,7 +15,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["gz_daqiush_controlled", "gz_daqiush_enable", "gz_daqiush_disable"],
 		majorSecondGroup: "wei",
 	}),
 	gz_daqiush2: new Character({
@@ -155,7 +155,7 @@ export default {
 		hujia: 0,
 		skills: [],
 	}),
-	gz_daqiuwei0: new Character({
+	gz_daqiush19: new Character({
 		sex: "male",
 		group: "wei",
 		hp: 4,
@@ -186,7 +186,7 @@ export const intro = {
 	gz_daqiush16: "测试武将描述",
 	gz_daqiush17: "测试武将描述",
 	gz_daqiush18: "测试武将描述",
-	gz_daqiuwei0: "测试武将描述",
+	gz_daqiush19: "测试武将描述",
 };
 
 export const sort = "guozhan_ee_test";

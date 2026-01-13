@@ -33,6 +33,205 @@ export class PlayerGuozhan extends Player {
 	}
 
 	/**
+	 * 获取玩家的安全显示名称（不暴露未明置的武将信息）
+	 * 
+	 * 根据明置状态选择显示名称：
+	 * - 若主将明置，用主将名称
+	 * - 否则若副将明置，用副将名称
+	 * - 否则用座位号
+	 * 
+	 * @returns {string} 玩家的显示名称
+	 */
+	getSafeName() {
+		if (!this.isUnseen(0)) {
+			// 主将明置，用主将名称
+			return get.translation(this.name1);
+		} else if (!this.isUnseen(1)) {
+			// 副将明置，用副将名称
+			return get.translation(this.name2);
+		} else {
+			// 都暗置，用座位号
+			return get.seatTranslation ? get.seatTranslation(this.getSeatNum()) : `${this.getSeatNum()}号位`;
+		}
+	}
+
+	// ==================== 技能使能位机制 ====================
+	
+	/**
+	 * 获取技能使能位字典
+	 * 
+	 * 每个玩家有一个字典，记录技能使能位的手动设置状态
+	 * 字典的 key 是技能名称，value 是 boolean（true=启用，false=禁用）
+	 * 如果字典中没有某个技能的记录，则使用技能的默认状态
+	 * 
+	 * @returns {{ [skill: string]: boolean }} 技能使能位字典
+	 */
+	getSkillEnabledBits() {
+		if (!this._skillEnabledBits) {
+			this._skillEnabledBits = {};
+		}
+		return this._skillEnabledBits;
+	}
+	
+	/**
+	 * 设置技能的使能位状态
+	 * 
+	 * 技能使能位机制说明：
+	 * - 每个技能可以有一个使能位，控制该技能是否有效
+	 * - 使能位为 false 时，技能无效（类似 tempBanSkill）
+	 * - 使能位为 true 或未设置时，技能正常生效
+	 * - 技能可以通过此方法影响自身或其他技能的使能位
+	 * 
+	 * @param {string} skill - 技能名称
+	 * @param {boolean} enabled - 使能位状态（true=有效, false=无效）
+	 * @param {boolean} [log=true] - 是否记录日志
+	 * @returns {this} 返回自身以支持链式调用
+	 */
+	setSkillEnabled(skill, enabled, log = true) {
+		if (Array.isArray(skill)) {
+			for (const s of skill) {
+				this.setSkillEnabled(s, enabled, log);
+			}
+			return this;
+		}
+		
+		const bits = this.getSkillEnabledBits();
+		const wasEnabled = this.isSkillEnabled(skill);
+		
+		// 记录到字典中
+		bits[skill] = enabled;
+		
+		// 记录日志
+		if (enabled && !wasEnabled) {
+			if (log && this.hasSkill(skill, null, null, false)) {
+				game.log(this, "的技能", `#g【${get.translation(skill)}】`, "恢复生效");
+			}
+		} else if (!enabled && wasEnabled) {
+			if (log && this.hasSkill(skill, null, null, false)) {
+				game.log(this, "的技能", `#g【${get.translation(skill)}】`, "失效了");
+			}
+		}
+		
+		_status.event?.clearStepCache?.();
+		return this;
+	}
+	
+	/**
+	 * 启用技能（设置使能位为 true）
+	 * 
+	 * @param {string | string[]} skill - 技能名称或技能名称数组
+	 * @param {boolean} [log=true] - 是否记录日志
+	 * @returns {this} 返回自身以支持链式调用
+	 */
+	enableSkillBit(skill, log = true) {
+		return this.setSkillEnabled(skill, true, log);
+	}
+	
+	/**
+	 * 禁用技能（设置使能位为 false）
+	 * 
+	 * @param {string | string[]} skill - 技能名称或技能名称数组
+	 * @param {boolean} [log=true] - 是否记录日志
+	 * @returns {this} 返回自身以支持链式调用
+	 */
+	disableSkillBit(skill, log = true) {
+		return this.setSkillEnabled(skill, false, log);
+	}
+	
+	/**
+	 * 检查技能的使能位状态
+	 * 
+	 * 判断顺序：
+	 * 1. 先查询玩家的使能位字典
+	 * 2. 若字典中没有对应值，再查询技能的默认使能/失能状态（enabledByDefault）
+	 * 
+	 * @param {string} skill - 技能名称
+	 * @returns {boolean} 使能位状态（true=有效, false=无效）
+	 */
+	isSkillEnabled(skill) {
+		const bits = this.getSkillEnabledBits();
+		
+		// 1. 先查询字典
+		if (skill in bits) {
+			return bits[skill];
+		}
+		
+		// 2. 字典中没有，查询技能的默认状态
+		const info = lib.skill[skill];
+		if (info && info.enabledByDefault === false) {
+			return false;
+		}
+		return true;
+	}
+	
+	/**
+	 * 切换技能的使能位状态
+	 * 
+	 * @param {string} skill - 技能名称
+	 * @param {boolean} [log=true] - 是否记录日志
+	 * @returns {this} 返回自身以支持链式调用
+	 */
+	toggleSkillBit(skill, log = true) {
+		return this.setSkillEnabled(skill, !this.isSkillEnabled(skill), log);
+	}
+	
+	/**
+	 * 重置技能的使能位为初始状态（从字典中删除记录）
+	 * 
+	 * @param {string | string[]} skill - 技能名称或技能名称数组
+	 * @param {boolean} [log=false] - 是否记录日志
+	 * @returns {this} 返回自身以支持链式调用
+	 */
+	resetSkillBit(skill, log = false) {
+		if (Array.isArray(skill)) {
+			for (const s of skill) {
+				this.resetSkillBit(s, log);
+			}
+			return this;
+		}
+		
+		const bits = this.getSkillEnabledBits();
+		const wasEnabled = this.isSkillEnabled(skill);
+		
+		// 从字典中删除记录
+		delete bits[skill];
+		
+		// 获取默认状态
+		const info = lib.skill[skill];
+		const defaultEnabled = !(info && info.enabledByDefault === false);
+		
+		// 记录日志（如果状态发生变化）
+		if (log && this.hasSkill(skill, null, null, false)) {
+			if (defaultEnabled && !wasEnabled) {
+				game.log(this, "的技能", `#g【${get.translation(skill)}】`, "恢复生效");
+			} else if (!defaultEnabled && wasEnabled) {
+				game.log(this, "的技能", `#g【${get.translation(skill)}】`, "失效了");
+			}
+		}
+		
+		_status.event?.clearStepCache?.();
+		return this;
+	}
+	
+	/**
+	 * 获取所有被手动禁用的技能（使能位字典中值为 false 的技能）
+	 * 
+	 * @returns {string[]} 被禁用的技能名称数组
+	 */
+	getDisabledSkillBits() {
+		const bits = this.getSkillEnabledBits();
+		const disabled = [];
+		for (const skill in bits) {
+			if (bits[skill] === false) {
+				disabled.push(skill);
+			}
+		}
+		return disabled;
+	}
+
+	// ==================== 技能使能位机制结束 ====================
+
+	/**
 	 * 获取玩家的势力
 	 *
 	 * @param { number } [num = 0] - 根据哪张武将牌返回势力，`0`为主将，`1`为副将（默认为0）

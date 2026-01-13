@@ -18,7 +18,7 @@ export default {
 	gz_daqiush16: "大秋蜀十六",
 	gz_daqiush17: "大秋蜀十七",
 	gz_daqiush18: "大秋蜀十八",
-	gz_daqiuwei0: "从蜀大秋魏零",
+	gz_daqiush19: "从蜀大秋魏零",
 
 };
 
