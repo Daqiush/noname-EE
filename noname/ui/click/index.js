@@ -3299,7 +3299,8 @@ export class Click {
 										delete lib.config.skin[subName];
 									}
 								}
-								if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && lib.config.mode_config.guozhan.guozhanSkin) {
+								const guozhanSkinEnabled = (lib.config.mode_config.guozhan?.guozhanSkin || lib.config.mode_config.guozhan_ee?.guozhanSkin);
+								if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && guozhanSkinEnabled) {
 									bg.setBackground(audioName || nameskin2, "character");
 									if (sourcenode) {
 										sourcenode.setBackground(audioName || nameskin2, "character");
@@ -3326,7 +3327,8 @@ export class Click {
 							}
 						});
 						if (i == "originSkin") {
-							if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && lib.config.mode_config.guozhan.guozhanSkin) {
+							const guozhanSkinEnabled = (lib.config.mode_config.guozhan?.guozhanSkin || lib.config.mode_config.guozhan_ee?.guozhanSkin);
+							if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && guozhanSkinEnabled) {
 								button.setBackground(audioName || nameskin2, "character", "noskin");
 							} else {
 								button.setBackground(audioName || nameskin, "character", "noskin");

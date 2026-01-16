@@ -24,6 +24,20 @@ function canBeMain(name) {
 	if (!info) return false;
 	// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
 	if (info.majorSecondGroup || info.group === "han") return false;
+	// mahjong 势力可以作为主将
+	return true;
+}
+
+/**
+ * 判断武将是否可作为副将
+ * @param {string} name - 武将名称
+ * @returns {boolean}
+ */
+function canBeVice(name) {
+	const info = get.character(name);
+	if (!info) return false;
+	// mahjong 势力禁止作为副将
+	if (info.group === "mahjong") return false;
 	return true;
 }
 
@@ -35,6 +49,8 @@ function canBeMain(name) {
 function getViceGroups(name) {
 	const info = get.character(name);
 	if (!info) return [];
+	// mahjong 势力禁止作为副将，返回空列表
+	if (info.group === "mahjong") return [];
 	const groups = [info.group];
 	// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
 	if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
@@ -56,11 +72,15 @@ function isValidCharacterPair(name1, name2) {
 	// name1 为主将，name2 为副将
 	// 检查主将是否可作为主将
 	if (!canBeMain(name1)) return false;
+	// 检查副将是否可作为副将
+	if (!canBeVice(name2)) return false;
 	const info1 = get.character(name1);
 	const info2 = get.character(name2);
 	if (!info1 || !info2) return false;
 	const group1 = info1.group;
 	const group2 = info2.group;
+	// mahjong 势力作为主将可搭配任意势力副将（禁止作为副将的势力除外，已在上方检查）
+	if (group1 === "mahjong") return true;
 	// han 势力作为副将可搭配任何主将
 	if (group2 === "han") return true;
 	// 获取副将的有效势力列表
@@ -511,12 +531,23 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 				if (!info) return false;
 				// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
 				if (info.majorSecondGroup || info.group === "han") return false;
+				// mahjong 势力可以作为主将
+				return true;
+			};
+			// 判断武将是否可作为副将
+			var canBeVice = function (name) {
+				const info = get.character(name);
+				if (!info) return false;
+				// mahjong 势力禁止作为副将
+				if (info.group === "mahjong") return false;
 				return true;
 			};
 			// 获取武将作为副将时的有效势力列表
 			var getViceGroups = function (name) {
 				const info = get.character(name);
 				if (!info) return [];
+				// mahjong 势力禁止作为副将，返回空列表
+				if (info.group === "mahjong") return [];
 				const groups = [info.group];
 				// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
 				if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
@@ -531,11 +562,15 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 				// name1 为主将，name2 为副将
 				// 检查主将是否可作为主将
 				if (!canBeMain(name1)) return false;
+				// 检查副将是否可作为副将
+				if (!canBeVice(name2)) return false;
 				var info1 = get.character(name1);
 				var info2 = get.character(name2);
 				if (!info1 || !info2) return false;
 				var group1 = info1.group;
 				var group2 = info2.group;
+				// mahjong 势力作为主将可搭配任意势力副将（禁止作为副将的势力除外，已在上方检查）
+				if (group1 === "mahjong") return true;
 				// han 势力作为副将可搭配任何主将
 				if (group2 === "han") return true;
 				// 获取副将的有效势力列表
@@ -989,12 +1024,23 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 			if (!info) return false;
 			// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
 			if (info.majorSecondGroup || info.group === "han") return false;
+			// mahjong 势力可以作为主将
+			return true;
+		};
+		// 判断武将是否可作为副将
+		const canBeVice = (name) => {
+			const info = get.character(name);
+			if (!info) return false;
+			// mahjong 势力禁止作为副将
+			if (info.group === "mahjong") return false;
 			return true;
 		};
 		// 获取武将作为副将时的有效势力列表
 		const getViceGroups = (name) => {
 			const info = get.character(name);
 			if (!info) return [];
+			// mahjong 势力禁止作为副将，返回空列表
+			if (info.group === "mahjong") return [];
 			const groups = [info.group];
 			// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
 			if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
@@ -1009,11 +1055,15 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 			// name1 为主将，name2 为副将
 			// 检查主将是否可作为主将
 			if (!canBeMain(name1)) return false;
+			// 检查副将是否可作为副将
+			if (!canBeVice(name2)) return false;
 			const info1 = get.character(name1);
 			const info2 = get.character(name2);
 			if (!info1 || !info2) return false;
 			const group1 = info1.group;
 			const group2 = info2.group;
+			// mahjong 势力作为主将可搭配任意势力副将（禁止作为副将的势力除外，已在上方检查）
+			if (group1 === "mahjong") return true;
 			// han 势力作为副将可搭配任何主将
 			if (group2 === "han") return true;
 			// 获取副将的有效势力列表
@@ -1058,12 +1108,23 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 			if (!info) return false;
 			// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
 			if (info.majorSecondGroup || info.group === "han") return false;
+			// mahjong 势力可以作为主将
+			return true;
+		};
+		// 判断武将是否可作为副将
+		const canBeVice = (name) => {
+			const info = get.character(name);
+			if (!info) return false;
+			// mahjong 势力禁止作为副将
+			if (info.group === "mahjong") return false;
 			return true;
 		};
 		// 获取武将作为副将时的有效势力列表
 		const getViceGroups = (name) => {
 			const info = get.character(name);
 			if (!info) return [];
+			// mahjong 势力禁止作为副将，返回空列表
+			if (info.group === "mahjong") return [];
 			const groups = [info.group];
 			// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
 			if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
@@ -1078,11 +1139,15 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 			// name1 为主将，name2 为副将
 			// 检查主将是否可作为主将
 			if (!canBeMain(name1)) return false;
+			// 检查副将是否可作为副将
+			if (!canBeVice(name2)) return false;
 			const info1 = get.character(name1);
 			const info2 = get.character(name2);
 			if (!info1 || !info2) return false;
 			const group1 = info1.group;
 			const group2 = info2.group;
+			// mahjong 势力作为主将可搭配任意势力副将（禁止作为副将的势力除外，已在上方检查）
+			if (group1 === "mahjong") return true;
 			// han 势力作为副将可搭配任何主将
 			if (group2 === "han") return true;
 			// 获取副将的有效势力列表

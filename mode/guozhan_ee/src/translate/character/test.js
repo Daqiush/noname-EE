@@ -18,8 +18,9 @@ export default {
 	gz_daqiush16: "大秋蜀十六",
 	gz_daqiush17: "大秋蜀十七",
 	gz_daqiush18: "大秋蜀十八",
-	gz_daqiush19: "从蜀大秋魏零",
-
+	gz_daqiush19: "从蜀大秋魏十九",
+	gz_miyanaga_teru: "宫永照",
+	gz_amae_koromo: "天江衣",
 };
 
 export const sort = ["guozhan_ee_test", "测试包"];

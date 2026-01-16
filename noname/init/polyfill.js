@@ -172,11 +172,12 @@ Reflect.defineProperty(HTMLDivElement.prototype, "setBackground", {
 			if (type === "character") {
 				nameinfo = get.character(name);
 				if (lib.characterPack[`mode_${mode}`] && lib.characterPack[`mode_${mode}`][name]) {
-					if (mode === "guozhan") {
+					if (mode === "guozhan" || mode === "guozhan_ee") {
 						if (name.startsWith("gz_shibing")) {
 							name = name.slice(3, 11);
 						} else {
-							if (lib.config.mode_config.guozhan.guozhanSkin && nameinfo && nameinfo.hasSkinInGuozhan) {
+							const guozhanSkinEnabled = (lib.config.mode_config.guozhan?.guozhanSkin || lib.config.mode_config.guozhan_ee?.guozhanSkin);
+							if (guozhanSkinEnabled && nameinfo && nameinfo.hasSkinInGuozhan) {
 								gzbool = true;
 							}
 							name = name.slice(3);

@@ -11020,6 +11020,7 @@ export class Library {
 			key: "键",
 			han: "汉",
 			jin: "晋",
+			mahjong: "雀",
 			ye: "野",
 			double: "双",
 			wei2: "魏国",
@@ -15128,6 +15129,7 @@ export class Library {
 		key: "key",
 		han: "metal",
 		jin: "thunder",
+		mahjong: "shen",
 		ye: "thunder",
 		devil: "devil",
 	};

@@ -15,7 +15,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["gz_daqiush_controlled", "gz_daqiush_enable", "gz_daqiush_disable"],
+		skills: ["gz_daqiush_controlled_active", "gz_daqiush_enable_active", "gz_daqiush_disable_active", "gz_daqiush_controlled_passive", "gz_daqiush_enable_passive", "gz_daqiush_disable_passive"],
 		majorSecondGroup: "wei",
 	}),
 	gz_daqiush2: new Character({
@@ -164,6 +164,28 @@ export default {
 		skills: ["gz_daqiush_kill", "gz_daqiush_hide", "gz_daqiush_show", "gz_daqiush_infect"],
 		minorSecondGroup: "shu",
 	}),
+	gz_miyanaga_teru: new Character({
+		sex: "female",
+		group: "mahjong",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["gz_miyanaga_teru_yumo",],
+			// "gz_miyanaga_teru_yueleng", "gz_miyanaga_teru_yueqing", 
+			// "gz_miyanaga_teru_yueming", "gz_miyanaga_teru_yuehui", 
+			// "gz_miyanaga_teru_yueqingg", "gz_miyanaga_teru_yuelian", 
+			// "gz_miyanaga_teru_yueluo", "gz_miyanaga_teru_yuehun"],
+	}),
+	gz_amae_koromo: new Character({
+		sex: "female",
+		group: "mahjong",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		isUnseen: true,
+		skills: [],
+		hasSkinInGuozhan: true,
+	}),
 };
 
 export const intro = {
@@ -187,6 +209,8 @@ export const intro = {
 	gz_daqiush17: "测试武将描述",
 	gz_daqiush18: "测试武将描述",
 	gz_daqiush19: "测试武将描述",
+	gz_miyanaga_teru: "宫永咲的姐姐，被福与恒子称为“站在高中生顶点的人”，拥有目前天才麻将少女之中数一数二的麻将实力。是去年全国高中生麻将大赛以及春季大赛的两冠优胜者，以及今年全国高中生个人赛优胜候补，是“被牌爱着的孩子”的三人之一。全国个人赛第二名的荒川憩，称其不是人类。",
+	gz_amae_koromo: "去年全国大赛的MVP选手。打法看起来像外行人一样，但在全国大赛中一回战击飞两家、二回战击飞三家，是知名的高火力选手。曾和职业雀士藤田靖子一起参加过某个友谊赛，因得点最高而拿下了冠军。",
 };
 
 export const sort = "guozhan_ee_test";

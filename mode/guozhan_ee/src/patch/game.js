@@ -295,9 +295,10 @@ export class GameGuozhan extends Game {
 			jin: "晋",
 			ye: "野",
 			unknown: "猜",
+			mahjong: "雀",
 		};
 		const maxPlayer = Math.floor(get.population() / 2);
-		for ( let group of ["wei", "shu", "wu", "qun", "jin"]) {
+		for ( let group of ["wei", "shu", "wu", "qun", "jin", "han", "mahjong"] ) {
 			if (group == _status.bannedGroup?.slice(6) || get.population(group) >= maxPlayer && !game.hasPlayer(current => {
 				return get.is.jun(current) && current.hasIdentity(group);
 			})) {
@@ -573,8 +574,8 @@ export class GameGuozhan extends Game {
 					return doublex.some(g => viceGroups.includes(g));
 				}
 				// 处理原有的野心家/神等特殊势力
-				if (group1 == "ye" || lib.selectGroup.includes(group1)) {
-					return group2 != "ye";
+				if (group1 in ["ye", "mahjong"] || lib.selectGroup.includes(group1)) {
+					return !(group2 in ["ye", "mahjong"]);
 				}
 				if (lib.selectGroup.includes(group2)) {
 					return true;

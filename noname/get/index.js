@@ -1,4 +1,4 @@
-import { Is } from "./is.js";
+﻿import { Is } from "./is.js";
 import { Promises } from "./promises.js";
 import { rootURL, game, lib, _status, ui } from "noname";
 import * as pinyinPro from "pinyin-pro";
@@ -5410,14 +5410,15 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 									}
 								} else {
 									delete lib.config.skin[nameskin];
+									const guozhanSkinEnabled = (lib.config.mode_config.guozhan?.guozhanSkin || lib.config.mode_config.guozhan_ee?.guozhanSkin);
 									if (avatar2) {
-										if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && lib.config.mode_config.guozhan.guozhanSkin) {
+										if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && guozhanSkinEnabled) {
 											node.node.avatar2.setBackground(nameskin2, "character");
 										} else {
 											node.node.avatar2.setBackground(nameskin, "character");
 										}
 									} else {
-										if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && lib.config.mode_config.guozhan.guozhanSkin) {
+										if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && guozhanSkinEnabled) {
 											node.node.avatar.setBackground(nameskin2, "character");
 										} else {
 											node.node.avatar.setBackground(nameskin, "character");
@@ -5430,7 +5431,8 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 							if (i) {
 								button.setBackgroundImage("image/skin/" + nameskin + "/" + i + ".jpg");
 							} else {
-								if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && lib.config.mode_config.guozhan.guozhanSkin) {
+								const guozhanSkinEnabled = (lib.config.mode_config.guozhan?.guozhanSkin || lib.config.mode_config.guozhan_ee?.guozhanSkin);
+								if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && guozhanSkinEnabled) {
 									button.setBackground(nameskin2, "character", "noskin");
 								} else {
 									button.setBackground(nameskin, "character", "noskin");
@@ -6024,7 +6026,8 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 									game.saveConfig("skin", lib.config.skin);
 								} else {
 									delete lib.config.skin[nameskin];
-									if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && lib.config.mode_config.guozhan.guozhanSkin) {
+									const guozhanSkinEnabled = (lib.config.mode_config.guozhan?.guozhanSkin || lib.config.mode_config.guozhan_ee?.guozhanSkin);
+									if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && guozhanSkinEnabled) {
 										node.setBackground(nameskin2, "character");
 									} else {
 										node.setBackground(nameskin, "character");
@@ -6036,7 +6039,8 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 							if (i) {
 								button.setBackgroundImage("image/skin/" + nameskin + "/" + i + ".jpg");
 							} else {
-								if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && lib.config.mode_config.guozhan.guozhanSkin) {
+								const guozhanSkinEnabled = (lib.config.mode_config.guozhan?.guozhanSkin || lib.config.mode_config.guozhan_ee?.guozhanSkin);
+							if (gzbool && lib.character[nameskin2].hasSkinInGuozhan && guozhanSkinEnabled) {
 									button.setBackground(nameskin2, "character", "noskin");
 								} else {
 									button.setBackground(nameskin, "character", "noskin");
@@ -7398,11 +7402,12 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 		}
 		const mode = get.mode();
 		if (lib.characterPack[`mode_${mode}`] && lib.characterPack[`mode_${mode}`][name]) {
-			if (mode === "guozhan") {
+			if (mode === "guozhan" || mode === "guozhan_ee") {
 				if (name.startsWith("gz_shibing")) {
 					name = name.slice(3, 11);
 				} else {
-					if (lib.config.mode_config.guozhan.guozhanSkin && nameinfo && nameinfo.hasSkinInGuozhan) {
+					const guozhanSkinEnabled = (lib.config.mode_config.guozhan?.guozhanSkin || lib.config.mode_config.guozhan_ee?.guozhanSkin);
+					if (guozhanSkinEnabled && nameinfo && nameinfo.hasSkinInGuozhan) {
 						gzbool = true;
 					}
 					name = name.slice(3);
