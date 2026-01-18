@@ -15,50 +15,6 @@ const get = _get;
 const html = String.raw;
 
 /**
- * 判断武将是否可作为主将
- * @param {string} name - 武将名称
- * @returns {boolean}
- */
-function canBeMain(name) {
-	const info = get.character(name);
-	if (!info) return false;
-	// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
-	if (info.majorSecondGroup || info.group === "han") return false;
-	// mahjong 势力可以作为主将
-	return true;
-}
-
-/**
- * 判断武将是否可作为副将
- * @param {string} name - 武将名称
- * @returns {boolean}
- */
-function canBeVice(name) {
-	const info = get.character(name);
-	if (!info) return false;
-	// mahjong 势力禁止作为副将
-	if (info.group === "mahjong") return false;
-	return true;
-}
-
-/**
- * 获取武将作为副将时的有效势力列表
- * @param {string} name - 武将名称
- * @returns {string[]}
- */
-function getViceGroups(name) {
-	const info = get.character(name);
-	if (!info) return [];
-	// mahjong 势力禁止作为副将，返回空列表
-	if (info.group === "mahjong") return [];
-	const groups = [info.group];
-	// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
-	if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
-	if (info.minorSecondGroup) groups.push(info.minorSecondGroup);
-	return groups;
-}
-
-/**
  * 判断两个武将是否可以组成合法的主副将组合
  * @param {string} name1 - 主将名称
  * @param {string} name2 - 副将名称
@@ -66,41 +22,8 @@ function getViceGroups(name) {
  */
 function isValidCharacterPair(name1, name2) {
 	// @ts-expect-error 祖宗之法就是这么写的
-	if (_status.separatism) {
-		return true;
-	}
-	// name1 为主将，name2 为副将
-	// 检查主将是否可作为主将
-	if (!canBeMain(name1)) return false;
-	// 检查副将是否可作为副将
-	if (!canBeVice(name2)) return false;
-	const info1 = get.character(name1);
-	const info2 = get.character(name2);
-	if (!info1 || !info2) return false;
-	const group1 = info1.group;
-	const group2 = info2.group;
-	// mahjong 势力作为主将可搭配任意势力副将（禁止作为副将的势力除外，已在上方检查）
-	if (group1 === "mahjong") return true;
-	// han 势力作为副将可搭配任何主将
-	if (group2 === "han") return true;
-	// 获取副将的有效势力列表
-	const viceGroups = getViceGroups(name2);
-	// 检查主将势力是否在副将有效势力中
-	if (viceGroups.includes(group1)) return true;
-	// 处理主将的 doubleGroup 情况
-	// @ts-expect-error 祖宗之法就是这么写的
-	const doublex = get.is.double(name1, true);
-	if (doublex && Array.isArray(doublex)) {
-		return doublex.some(g => viceGroups.includes(g));
-	}
-	// 处理原有的野心家/神等特殊势力
-	if (group1 === "ye" || lib.selectGroup.includes(group1)) {
-		return group2 !== "ye";
-	}
-	if (lib.selectGroup.includes(group2)) {
-		return true;
-	}
-	return false;
+	if (_status.separatism) return true;
+	return isValidCharacterCombination(name1, name2);
 }
 
 /**
@@ -159,6 +82,10 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 			}
 		}
 		if (lib.character[character].hasHiddenSkill) {
+			continue;
+		}
+		// mahjong 势力武将不出现在单人模式的初始选将范围里
+		if (lib.character[character].group === "mahjong") {
 			continue;
 		}
 		characterList.push(character);
@@ -525,84 +452,15 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 			if (lib.character[button.link].hasHiddenSkill) {
 				return false;
 			}
-			// 判断武将是否可作为主将
-			var canBeMain = function (name) {
-				const info = get.character(name);
-				if (!info) return false;
-				// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
-				if (info.majorSecondGroup || info.group === "han") return false;
-				// mahjong 势力可以作为主将
-				return true;
-			};
-			// 判断武将是否可作为副将
-			var canBeVice = function (name) {
-				const info = get.character(name);
-				if (!info) return false;
-				// mahjong 势力禁止作为副将
-				if (info.group === "mahjong") return false;
-				return true;
-			};
-			// 获取武将作为副将时的有效势力列表
-			var getViceGroups = function (name) {
-				const info = get.character(name);
-				if (!info) return [];
-				// mahjong 势力禁止作为副将，返回空列表
-				if (info.group === "mahjong") return [];
-				const groups = [info.group];
-				// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
-				if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
-				if (info.minorSecondGroup) groups.push(info.minorSecondGroup);
-				return groups;
-			};
-			var filterChoice = function (name1, name2) {
-				// @ts-expect-error 祖宗之法就是这么写的
-				if (_status.separatism) {
-					return true;
-				}
-				// name1 为主将，name2 为副将
-				// 检查主将是否可作为主将
-				if (!canBeMain(name1)) return false;
-				// 检查副将是否可作为副将
-				if (!canBeVice(name2)) return false;
-				var info1 = get.character(name1);
-				var info2 = get.character(name2);
-				if (!info1 || !info2) return false;
-				var group1 = info1.group;
-				var group2 = info2.group;
-				// mahjong 势力作为主将可搭配任意势力副将（禁止作为副将的势力除外，已在上方检查）
-				if (group1 === "mahjong") return true;
-				// han 势力作为副将可搭配任何主将
-				if (group2 === "han") return true;
-				// 获取副将的有效势力列表
-				var viceGroups = getViceGroups(name2);
-				// 检查主将势力是否在副将有效势力中
-				if (viceGroups.includes(group1)) return true;
-				// 处理主将的 doubleGroup 情况
-				// @ts-expect-error 祖宗之法就是这么写的
-				var doublex = get.is.double(name1, true);
-				if (doublex && Array.isArray(doublex)) {
-					return doublex.some(g => viceGroups.includes(g));
-				}
-				// 处理原有的野心家/神等特殊势力
-				if (group1 == "ye" || lib.selectGroup.includes(group1)) {
-					return group2 != "ye";
-				}
-				if (lib.selectGroup.includes(group2)) {
-					return true;
-				}
-				return false;
-			};
 			if (!ui.selected.buttons.length) {
 				return ui.dialog.buttons.some(but => {
-					if (but == button) {
-						return false;
-					}
+					if (but == button) return false;
 					// @ts-expect-error 祖宗之法就是这么写的
-					return filterChoice(button.link, but.link);
+					return isValidCharacterPair(button.link, but.link);
 				});
 			}
 			// @ts-expect-error 祖宗之法就是这么写的
-			return filterChoice(ui.selected.buttons[0].link, button.link);
+			return isValidCharacterPair(ui.selected.buttons[0].link, button.link);
 		}
 
 		function switchToAuto() {
@@ -757,8 +615,13 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 
 	/** @type {Record<string, Character>} */
 	const pack = Reflect.get(lib.characterPack, "mode_guozhan_ee");
+	// 过滤掉 mahjong 势力武将（作为彩蛋单独处理）
 	const characterList = Object.keys(pack).filter(character => {
-		return !character.startsWith("gz_shibing") && !get.is.jun(character) && !lib.config.guozhan_banned?.includes(character);
+		return !character.startsWith("gz_shibing") && !get.is.jun(character) && !lib.config.guozhan_banned?.includes(character) && lib.character[character]?.group !== "mahjong";
+	});
+	// 获取 mahjong 势力武将列表（用于彩蛋）
+	const mahjongCharacters = Object.keys(pack).filter(character => {
+		return lib.character[character]?.group === "mahjong" && !lib.config.guozhan_banned?.includes(character);
 	});
 	Reflect.set(_status, "characterlist", characterList.slice(0));
 	Reflect.set(_status, "yeidentity", []);
@@ -775,6 +638,24 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 
 	characterList.randomSort();
 
+	// 2.5% 概率给一名真人玩家发 mahjong 势力武将（彩蛋）
+	let mahjongLuckyPlayerIndex = -1;
+	let mahjongCharacter = null;
+	if (mahjongCharacters.length > 0 && Math.random() < 0.025) {
+		// 找到所有真人玩家的索引
+		const humanPlayerIndices = [];
+		for (let i = 0; i < game.players.length; i++) {
+			// 真人玩家：是 game.me 或者是 isOnline() 为 true 的玩家
+			if (game.players[i] === game.me || (game.players[i].isOnline && game.players[i].isOnline())) {
+				humanPlayerIndices.push(i);
+			}
+		}
+		if (humanPlayerIndices.length > 0) {
+			mahjongLuckyPlayerIndex = humanPlayerIndices.randomGet();
+			mahjongCharacter = mahjongCharacters.randomGet();
+		}
+	}
+
 	// 为所有玩家发将，并进行合法性检查
 	/** @type {string[][]} */
 	let playerChooseLists = [];
@@ -787,8 +668,12 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 		tempCharacterList.randomSort();
 
 		// 为每个玩家发将
-		for (const player of game.players) {
+		for (let i = 0; i < game.players.length; i++) {
 			const chooseList = game.getCharacterChoice(tempCharacterList, num);
+			// 如果是幸运玩家，添加 mahjong 势力武将
+			if (i === mahjongLuckyPlayerIndex && mahjongCharacter) {
+				chooseList.push(mahjongCharacter);
+			}
 			playerChooseLists.push(chooseList);
 		}
 
@@ -1018,168 +903,31 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 				}
 			}
 		}
-		// 判断武将是否可作为主将
-		const canBeMain = (name) => {
-			const info = get.character(name);
-			if (!info) return false;
-			// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
-			if (info.majorSecondGroup || info.group === "han") return false;
-			// mahjong 势力可以作为主将
-			return true;
-		};
-		// 判断武将是否可作为副将
-		const canBeVice = (name) => {
-			const info = get.character(name);
-			if (!info) return false;
-			// mahjong 势力禁止作为副将
-			if (info.group === "mahjong") return false;
-			return true;
-		};
-		// 获取武将作为副将时的有效势力列表
-		const getViceGroups = (name) => {
-			const info = get.character(name);
-			if (!info) return [];
-			// mahjong 势力禁止作为副将，返回空列表
-			if (info.group === "mahjong") return [];
-			const groups = [info.group];
-			// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
-			if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
-			if (info.minorSecondGroup) groups.push(info.minorSecondGroup);
-			return groups;
-		};
-		const filterChoice = (name1, name2) => {
-			// @ts-expect-error 祖宗之法就是这么写的
-			if (_status.separatism) {
-				return true;
-			}
-			// name1 为主将，name2 为副将
-			// 检查主将是否可作为主将
-			if (!canBeMain(name1)) return false;
-			// 检查副将是否可作为副将
-			if (!canBeVice(name2)) return false;
-			const info1 = get.character(name1);
-			const info2 = get.character(name2);
-			if (!info1 || !info2) return false;
-			const group1 = info1.group;
-			const group2 = info2.group;
-			// mahjong 势力作为主将可搭配任意势力副将（禁止作为副将的势力除外，已在上方检查）
-			if (group1 === "mahjong") return true;
-			// han 势力作为副将可搭配任何主将
-			if (group2 === "han") return true;
-			// 获取副将的有效势力列表
-			const viceGroups = getViceGroups(name2);
-			// 检查主将势力是否在副将有效势力中
-			if (viceGroups.includes(group1)) return true;
-			// 处理主将的 doubleGroup 情况
-			// @ts-expect-error 祖宗之法就是这么写的
-			const doublex = get.is.double(name1, true);
-			if (doublex && Array.isArray(doublex)) {
-				return doublex.some(g => viceGroups.includes(g));
-			}
-			// 处理原有的野心家/神等特殊势力
-			if (group1 === "ye" || lib.selectGroup.includes(group1)) {
-				return group2 !== "ye";
-			}
-			if (lib.selectGroup.includes(group2)) {
-				return true;
-			}
-			return false;
-		};
 		if (!ui.selected.buttons.length) {
 			return ui.dialog.buttons.some(but => {
-				if (but === button) {
-					return false;
-				}
+				if (but === button) return false;
 				// @ts-expect-error 祖宗之法就是这么写的
-				return filterChoice(button.link, but.link);
+				return isValidCharacterPair(button.link, but.link);
 			});
 		}
 		// @ts-expect-error 祖宗之法就是这么写的
-		return filterChoice(ui.selected.buttons[0].link, button.link);
+		return isValidCharacterPair(ui.selected.buttons[0].link, button.link);
 	}
 
 	function chooseCharacterCheck() {
 		// @ts-expect-error 祖宗之法就是这么写的
 		const buttons = _status.event.dialog.buttons;
 
-		// 判断武将是否可作为主将
-		const canBeMain = (name) => {
-			const info = get.character(name);
-			if (!info) return false;
-			// 拥有 majorSecondGroup 或 group 为 han 的武将禁止作为主将
-			if (info.majorSecondGroup || info.group === "han") return false;
-			// mahjong 势力可以作为主将
-			return true;
-		};
-		// 判断武将是否可作为副将
-		const canBeVice = (name) => {
-			const info = get.character(name);
-			if (!info) return false;
-			// mahjong 势力禁止作为副将
-			if (info.group === "mahjong") return false;
-			return true;
-		};
-		// 获取武将作为副将时的有效势力列表
-		const getViceGroups = (name) => {
-			const info = get.character(name);
-			if (!info) return [];
-			// mahjong 势力禁止作为副将，返回空列表
-			if (info.group === "mahjong") return [];
-			const groups = [info.group];
-			// majorSecondGroup 或 minorSecondGroup（作为副将时生效）都算作有效势力
-			if (info.majorSecondGroup) groups.push(info.majorSecondGroup);
-			if (info.minorSecondGroup) groups.push(info.minorSecondGroup);
-			return groups;
-		};
-		const filterChoice = (name1, name2) => {
-			// @ts-expect-error 祖宗之法就是这么写的
-			if (_status.separatism) {
-				return true;
-			}
-			// name1 为主将，name2 为副将
-			// 检查主将是否可作为主将
-			if (!canBeMain(name1)) return false;
-			// 检查副将是否可作为副将
-			if (!canBeVice(name2)) return false;
-			const info1 = get.character(name1);
-			const info2 = get.character(name2);
-			if (!info1 || !info2) return false;
-			const group1 = info1.group;
-			const group2 = info2.group;
-			// mahjong 势力作为主将可搭配任意势力副将（禁止作为副将的势力除外，已在上方检查）
-			if (group1 === "mahjong") return true;
-			// han 势力作为副将可搭配任何主将
-			if (group2 === "han") return true;
-			// 获取副将的有效势力列表
-			const viceGroups = getViceGroups(name2);
-			// 检查主将势力是否在副将有效势力中
-			if (viceGroups.includes(group1)) return true;
-			// 处理主将的 doubleGroup 情况
-			// @ts-expect-error 祖宗之法就是这么写的
-			const doublex = get.is.double(name1, true);
-			if (doublex && Array.isArray(doublex)) {
-				return doublex.some(g => viceGroups.includes(g));
-			}
-			// 处理原有的野心家/神等特殊势力
-			if (group1 === "ye" || lib.selectGroup.includes(group1)) {
-				return group2 !== "ye";
-			}
-			if (lib.selectGroup.includes(group2)) {
-				return true;
-			}
-			return false;
-		};
-
 		for (let i = 0; i < buttons.length - 1; ++i) {
 			const button1 = buttons[i];
 			for (let j = i + 1; j < buttons.length; ++j) {
 				const button2 = buttons[j];
 
-				if (filterChoice(button1.link, button2.link) || filterChoice(button2.link, button1.link)) {
+				if (isValidCharacterPair(button1.link, button2.link) || isValidCharacterPair(button2.link, button1.link)) {
 					let mainx = button1.link;
 					let vicex = button2.link;
 
-					if (!filterChoice(mainx, vicex) || (filterChoice(vicex, mainx) && get.guozhanReverse(mainx, vicex))) {
+					if (!isValidCharacterPair(mainx, vicex) || (isValidCharacterPair(vicex, mainx) && get.guozhanReverse(mainx, vicex))) {
 						mainx = button2.link;
 						vicex = button1.link;
 					}
@@ -1749,57 +1497,58 @@ export const changeViceOnline = async (event, _trigger, player) => {
 
 export const changeVice = [
 	async (event, _trigger, player) => {
-		player.showCharacter(2);
+		// 明置副将
+		await player.showCharacter(2);
 		if (!event.num) {
 			event.num = 3;
 		}
-		var group = player.identity;
-		// 如果是野心家身份，转换为 "ye" 用于匹配武将势力
-		if (isYeIdentity(group)) {
-			group = "ye";
-		} else if (!lib.group.includes(group)) {
-			group = lib.character[player.name1][1];
-		}
-		// @ts-expect-error 类型就是这么写的
-		_status.characterlist.randomSort();
+		const mainName = player.name1;
+		
+		// 从武将牌堆顶部抽取武将，不合法的放回底部
 		event.tochange = [];
 		// @ts-expect-error 类型就是这么写的
-		for (var i = 0; i < _status.characterlist.length; i++) {
+		const maxAttempts = _status.characterlist.length; // 防止无限循环
+		let attempts = 0;
+		
+		// @ts-expect-error 类型就是这么写的
+		while (event.tochange.length < event.num && _status.characterlist.length > 0 && attempts < maxAttempts) {
+			attempts++;
 			// @ts-expect-error 类型就是这么写的
-			if (_status.characterlist[i].indexOf("gz_jun_") == 0) {
-				continue;
-			}
-			// @ts-expect-error 类型就是这么写的
-			if (game.hasPlayer2(current => get.nameList(current).includes(_status.characterlist[i]))) {
-				continue;
-			}
-			var goon = false,
+			const candidateName = _status.characterlist.shift();
+			
+			// 跳过君主武将（放回牌堆底部）
+			if (candidateName.indexOf("gz_jun_") == 0) {
+				game.log("#y" + get.translation(candidateName), "是君主武将，放回牌堆底部");
 				// @ts-expect-error 类型就是这么写的
-				group2 = lib.character[_status.characterlist[i]][1];
-			if (group == "ye") {
-				if (group2 != "ye") {
-					goon = true;
-				}
+				_status.characterlist.push(candidateName);
+				continue;
+			}
+			// 跳过已在场的武将（放回牌堆底部）
+			if (game.hasPlayer2(current => get.nameList(current).includes(candidateName))) {
+				game.log("#y" + get.translation(candidateName), "已在场上，放回牌堆底部");
+				// @ts-expect-error 类型就是这么写的
+				_status.characterlist.push(candidateName);
+				continue;
+			}
+			// mahjong 势力武将不出现在变更副将的武将牌堆里（放回牌堆底部）
+			if (lib.character[candidateName]?.group === "mahjong") {
+				game.log("#y" + get.translation(candidateName), "是麻将势力，放回牌堆底部");
+				// @ts-expect-error 类型就是这么写的
+				_status.characterlist.push(candidateName);
+				continue;
+			}
+			
+			// 使用 isValidCharacterCombination 检查是否可作为合法副将
+			if (isValidCharacterCombination(mainName, candidateName)) {
+				event.tochange.push(candidateName);
 			} else {
-				if (group == group2) {
-					goon = true;
-				} else {
-					// @ts-expect-error 类型就是这么写的
-					var double = get.is.double(_status.characterlist[i], true);
-					// @ts-expect-error 类型就是这么写的
-					if (double && double.includes(group)) {
-						goon = true;
-					}
-				}
-			}
-			if (goon) {
+				// 不合法的副将，生成log并放回牌堆底部
+				game.log("#y" + get.translation(candidateName), "不能作为", player, "的合法副将，放回牌堆底部");
 				// @ts-expect-error 类型就是这么写的
-				event.tochange.push(_status.characterlist[i]);
-				if (event.tochange.length == event.num) {
-					break;
-				}
+				_status.characterlist.push(candidateName);
 			}
 		}
+		
 		if (!event.tochange.length) {
 			event.finish();
 		} else {
@@ -1818,8 +1567,13 @@ export const changeVice = [
 	},
 	async (event, _trigger, player, result) => {
 		var name = result.links[0];
-		// @ts-expect-error 类型就是这么写的
-		_status.characterlist.remove(name);
+		// 将未选择的武将放回牌堆底部
+		for (const char of event.tochange) {
+			if (char !== name) {
+				// @ts-expect-error 类型就是这么写的
+				_status.characterlist.push(char);
+			}
+		}
 		if (player.hasViceCharacter()) {
 			event.change = true;
 			// @ts-expect-error 类型就是这么写的
@@ -2034,6 +1788,207 @@ export const replaceCharacter = async (event, _trigger, player) => {
 }
 
 /**
+ * 检测武将组合是否合法
+ * @param {string} mainName - 主将名称
+ * @param {string | null} viceName - 副将名称，如果为 null 表示没有副将（副将是士兵）
+ * @param {string} [playerGroup] - 玩家当前势力，当没有副将时需要此参数
+ * @returns {boolean} 是否合法
+ */
+export const isValidCharacterCombination = (mainName, viceName, playerGroup) => {
+	const mainInfo = lib.character[mainName];
+	if (!mainInfo) return false;
+	
+	// 主将不能有 majorSecondGroup 或为 han 势力
+	if (mainInfo.majorSecondGroup || mainInfo.group === "han") return false;
+	
+	// 如果没有副将（副将是士兵），需要基于玩家当前势力匹配主将
+	if (!viceName) {
+		if (!playerGroup) return true; // 如果没有提供势力信息，则只检查主将基本条件
+		
+		const mainGroup = mainInfo.group;
+		
+		// 野心家势力特殊处理
+		if (playerGroup === "ye") {
+			return mainGroup !== "ye";
+		}
+		
+		// 检查主将势力是否匹配玩家势力
+		if (mainGroup === playerGroup) return true;
+		
+		// 处理主将的 doubleGroup 情况
+		// @ts-expect-error 祖宗之法就是这么写的
+		const doublex = get.is.double(mainName, true);
+		if (doublex && Array.isArray(doublex)) {
+			return doublex.includes(playerGroup);
+		}
+		
+		return false;
+	}
+	
+	// 有副将时检查组合是否合法
+	const viceInfo = lib.character[viceName];
+	if (!viceInfo) return false;
+	
+	// mahjong 势力禁止作为副将
+	if (viceInfo.group === "mahjong") return false;
+	
+	const mainGroup = mainInfo.group;
+	const viceGroup = viceInfo.group;
+	
+	// mahjong 势力作为主将可搭配任意势力副将（禁止作为副将的势力已在上方检查）
+	if (mainGroup === "mahjong") return true;
+	
+	// han 势力作为副将可搭配任何主将
+	if (viceGroup === "han") return true;
+	
+	// 获取副将的有效势力列表（包括 majorSecondGroup 和 minorSecondGroup）
+	const viceGroups = [viceGroup];
+	if (viceInfo.majorSecondGroup) viceGroups.push(viceInfo.majorSecondGroup);
+	if (viceInfo.minorSecondGroup) viceGroups.push(viceInfo.minorSecondGroup);
+	
+	// 检查主将势力是否在副将有效势力中
+	if (viceGroups.includes(mainGroup)) return true;
+	
+	// 处理主将的 doubleGroup 情况
+	// @ts-expect-error 祖宗之法就是这么写的
+	const doublex = get.is.double(mainName, true);
+	if (doublex && Array.isArray(doublex)) {
+		return doublex.some(g => viceGroups.includes(g));
+	}
+	
+	// 处理原有的野心家/神等特殊势力
+	if (mainGroup === "ye" || lib.selectGroup.includes(mainGroup)) {
+		return viceGroup !== "ye";
+	}
+	if (lib.selectGroup.includes(viceGroup)) {
+		return true;
+	}
+	
+	return false;
+};
+
+/**
+ * 变更主将
+ * @param {GameEvent} event
+ * @param {GameEvent} _trigger
+ * @param {Player} player
+ */
+export const changeMain = async (event, _trigger, player) => {
+	const { hidden } = event;
+	const oldMainName = player.name1;
+	let viceName = player.name2;
+	
+	// 明置主将（参数0表示主将）
+	await player.showCharacter(0);
+	
+	// 如果武将牌堆不存在，直接结束
+	// @ts-expect-error 类型就是这么写的
+	if (!_status.characterlist || _status.characterlist.length === 0) {
+		console.warn("changeMain: 武将牌堆为空或不存在");
+		return;
+	}
+	
+	// 检查副将是否是士兵
+	if (viceName && viceName.indexOf("gz_shibing") === 0) {
+		viceName = null;
+	}
+	
+	// 获取玩家当前势力（用于没有副将的情况）
+	let playerGroup = player.identity;
+	// 如果是野心家身份，转换为 "ye" 用于匹配武将势力
+	if (isYeIdentity(playerGroup)) {
+		playerGroup = "ye";
+	} else if (!lib.group.includes(playerGroup)) {
+		playerGroup = lib.character[player.name1][1];
+	}
+	
+	// 从武将牌堆顶部获取武将，直到找到合法的主将
+	// 不合法的武将放回牌堆底部
+	let newMainName = null;
+	
+	// @ts-expect-error 类型就是这么写的
+	while (_status.characterlist.length > 0) {
+		// @ts-expect-error 类型就是这么写的
+		const candidateName = _status.characterlist.shift();
+		
+		// 跳过君主武将（放回牌堆底部）
+		if (candidateName.indexOf("gz_jun_") === 0) {
+			game.log("#y" + get.translation(candidateName), "是君主武将，放回牌堆底部");
+			// @ts-expect-error 类型就是这么写的
+			_status.characterlist.push(candidateName);
+			continue;
+		}
+		// 跳过已在场的武将（放回牌堆底部）
+		if (game.hasPlayer2(current => get.nameList(current).includes(candidateName))) {
+			game.log("#y" + get.translation(candidateName), "已在场上，放回牌堆底部");
+			// @ts-expect-error 类型就是这么写的
+			_status.characterlist.push(candidateName);
+			continue;
+		}
+		// mahjong 势力武将不出现在变更主将的武将牌堆里（放回牌堆底部）
+		if (lib.character[candidateName]?.group === "mahjong") {
+			game.log("#y" + get.translation(candidateName), "是麻将势力，放回牌堆底部");
+			// @ts-expect-error 类型就是这么写的
+			_status.characterlist.push(candidateName);
+			continue;
+		}
+		
+		// 检查是否可作为合法主将
+		if (isValidCharacterCombination(candidateName, viceName, playerGroup)) {
+			newMainName = candidateName;
+			break;
+		}
+		
+		// 不合法的主将，生成log并放回牌堆底部
+		game.log("#y" + get.translation(candidateName), "不能作为", player, "的合法主将，放回牌堆底部");
+		// @ts-expect-error 类型就是这么写的
+		_status.characterlist.push(candidateName);
+	}
+	
+	// 如果没有找到合法的主将，结束
+	if (!newMainName) {
+		console.warn("changeMain: 未找到合法的主将");
+		return;
+	}
+	
+	// 将旧主将放回武将牌堆
+	// @ts-expect-error 类型就是这么写的
+	if (oldMainName && oldMainName.indexOf("gz_shibing") !== 0 && _status.characterlist) {
+		// @ts-expect-error 类型就是这么写的
+		_status.characterlist.add(oldMainName);
+	}
+	
+	// 触发移除武将前事件
+	if (oldMainName && oldMainName.indexOf("gz_shibing") !== 0) {
+		event.trigger("removeCharacterBefore");
+	}
+	
+	// 记录日志
+	if (hidden) {
+		game.log(player, "替换了主将", "#g" + get.translation(oldMainName));
+	} else {
+		game.log(player, "将主将从", "#g" + get.translation(oldMainName), "变更为", "#g" + get.translation(newMainName));
+	}
+	
+	// 执行武将替换
+	await player.reinitCharacter(oldMainName, newMainName, false);
+	
+	// 如果需要暗置
+	if (hidden) {
+		if (!player.isUnseen(0)) {
+			// hideCharacter 内部会调用 recalculateIdentity()，无需再次调用
+			await player.hideCharacter(0, false);
+		}
+	} else {
+		// 不暗置时，武将已经是明置状态，重新计算势力
+		// numOfReadyToShow=0 表示不是新增明置，而是替换后的状态
+		if (typeof player.recalculateIdentity === "function") {
+			player.recalculateIdentity();
+		}
+	}
+};
+
+/**
  *
  * @param {GameEvent} _event
  * @param {GameEvent} _trigger
@@ -2049,6 +2004,8 @@ export const zhulian = async (_event, _trigger, player) => {
 export default {
 	hideCharacter,
 	replaceCharacter,
+	isValidCharacterCombination,
+	changeMain,
 	chooseJunlingFor,
 	chooseJunlingControl,
 	carryOutJunling,

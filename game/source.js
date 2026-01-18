@@ -100,6 +100,7 @@ window.noname_source_list = [
 
 	"card/extra.js",
 	"card/guozhan.js",
+	"card/guozhan_ee.js",
 	"card/sp.js",
 	"card/standard.js",
 	"card/xianxia.js",

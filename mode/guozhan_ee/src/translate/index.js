@@ -26,6 +26,11 @@ export default {
 	"8_ye": "野",
 	"9_ye": "野",
 	"10_ye": "野",
+	"11_ye": "野",
+
+	han: "汉",
+	mahjong: "雀",
+	jin: "晋",
 
 	// 组合势力翻译（副将有第二势力时使用，带势力颜色）
 	// groupnature: qun="qun", shu="soil", wei="water", wu="wood", ye="thunder"(野心家用紫色)

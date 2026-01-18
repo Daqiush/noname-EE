@@ -52,6 +52,7 @@ export default {
 			},
 		},
 	},
+
 	// 从魏大秋蜀二的测试技能：选择隐藏主将或副将
 	gz_daqiush_show: {
 		enable: "phaseUse",
@@ -78,6 +79,7 @@ export default {
 			},
 		},
 	},
+
 	// 从魏大秋蜀二的测试技能：传播副将
 	gz_daqiush_infect: {
 		enable: "phaseUse",
@@ -93,6 +95,53 @@ export default {
 				if (target.isUnseen(1))
 					target.showCharacter(1);
 			}
+		},
+		ai: {
+			// 确保AI不会使用此技能
+			order: 0,
+			result: {
+				target: 0,
+			},
+		},
+	},
+
+	// 从魏大秋蜀二的测试技能：变更主将
+	gz_daqiush_changemain: {
+		enable: "phaseUse",
+		usable: 10000,
+		filterTarget: function (card, player, target) {
+			return true;
+		},
+		content: function () {
+			"step 0";
+			target.changeMain(false);
+		},
+		ai: {
+			// 确保AI不会使用此技能
+			order: 0,
+			result: {
+				target: 0,
+			},
+		},
+	},
+
+	// 从魏大秋蜀二的测试技能：选择移除主将或副将
+	gz_daqiush_remove: {
+		enable: "phaseUse",
+		usable: 10000,
+		filterTarget: function (card, player, target) {
+			return true;
+		},
+		content: function () {
+			"step 0";
+			var choiceList = ["移除主将", "移除副将"];
+			player.chooseControl(lib.card.chiling.chooseai).set("prompt", "移除将").set("choiceList", choiceList);
+			"step 1";
+			var index = result.index;
+			if (index === 0)
+				target.removeCharacter(0);
+			else
+				target.removeCharacter(1);
 		},
 		ai: {
 			// 确保AI不会使用此技能
@@ -206,17 +255,17 @@ export default {
 	},
 
 	// 玉魔：
-	gz_miyanaga_teru_yumo: {
+	miyanaga_teru_yumo: {
 	    enabledByDefault: true,  // 初始状态为启用
 		audio: 3,
-		group: ["gz_miyanaga_teru_yumo_battlecry", "gz_miyanaga_teru_yumo_assertion"],
+		group: ["miyanaga_teru_yumo_battlecry", "miyanaga_teru_yumo_assertion"],
 		subSkill:{
 			battlecry:{
 				trigger: {player: "showCharacterEnd"},
 				forced: true,
 				filter(event, player) {
 					return event.toShow.some(name => {
-						return get.character(name, 3).includes("gz_miyanaga_teru_yumo");
+						return get.character(name, 3).includes("miyanaga_teru_yumo");
 					});
 				},
 				async content(event, trigger, player) {
@@ -228,21 +277,21 @@ export default {
 			},
 			assertion:{
 				trigger: {global: "phaseBegin", player: "showCharacterEnd"},
-				audio: ["gz_miyanaga_teru_assert1.mp3"],
+				audio: ["miyanaga_teru_assert1.mp3"],
 				forced: true,
 				async content(event, trigger, player) {
 					if (trigger.name == "phase") {
 						// 回合开始时失能此技能，获取技能名方法为event.name，但截掉最后一个子技能名（一个下划线）部分
 						const parentName = event.name.slice(0, event.name.lastIndexOf("_"));
 						player.disableSkillBit(parentName);
-						player.addTempSkill("gz_miyanaga_teru_yumo_assertion_succeeded", "phaseBefore");
-						player.addTempSkill("gz_miyanaga_teru_yumo_assertion_failed", "phaseBefore");
+						player.addTempSkill("miyanaga_teru_yumo_assertion_succeeded", "phaseBefore");
+						player.addTempSkill("miyanaga_teru_yumo_assertion_failed", "phaseBefore");
 					}
 				},
 			},
 			assertion_succeeded:{
 				trigger: {global: "phaseEnd"},
-				audio: ["gz_miyanaga_teru_yumo_assertion_succeeded1.mp3"],
+				audio: ["miyanaga_teru_yumo_assertion_succeeded1.mp3"],
 				forced: true,
 				async content(event, trigger, player) {
 					// 成功：使能【月冷】。从弃牌堆中获得此牌。
@@ -250,11 +299,11 @@ export default {
 			},
 			assertion_failed:{
 				trigger: {global: "phaseEnd"},
-				audio: ["gz_miyanaga_teru_yumo_assertion_failed1.mp3"],
+				audio: ["miyanaga_teru_yumo_assertion_failed1.mp3"],
 				forced: true,
 				async content(event, trigger, player) {
 					// 失败：使能【玉魔】。
-					player.enableSkillBit("gz_miyanaga_teru_yumo");  
+					player.enableSkillBit("miyanaga_teru_yumo");  
 				}
 			}
 		}
@@ -295,7 +344,7 @@ export default {
 				forced: true,
 				async content(event, trigger, player) {
 					// 失败：使能【玉魔】。
-					player.enableSkillBit("gz_miyanaga_teru_yumo");  
+					player.enableSkillBit("miyanaga_teru_yumo");  
 				}
 			}
 		}

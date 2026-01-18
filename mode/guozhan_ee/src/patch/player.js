@@ -1128,13 +1128,55 @@ export class PlayerGuozhan extends Player {
 		if (!info) {
 			return;
 		}
-		var to = "gz_shibing" + (info[0] == "male" ? 1 : 2) + info[1];
-		game.log(this, "移除了" + (num ? "副将" : "主将"), "#b" + name);
-		if (!lib.character[to]) {
-			// @ts-expect-error 类型就是这么写的
-			lib.character[to] = [info[0], info[1], 0, [], [`character:${to.slice(3, 11)}`, "unseen"]];
-			lib.translate[to] = `${get.translation(info[1])}兵`;
+		
+		// 根据武将的双势力属性确定士兵类型
+		var sex = info[0] == "female" ? 2 : 1;
+		var group = info[1];
+		var second = info.majorSecondGroup || info.minorSecondGroup;
+		var to;
+		
+		if (second) {
+			const groups = [group, second].sort();
+			// 如果两个势力都在四大势力中，使用组合名（C(4,2)=6）
+			if (["wei", "shu", "wu", "qun"].includes(groups[0]) && ["wei", "shu", "wu", "qun"].includes(groups[1])) {
+				to = "gz_shibing" + sex + "_" + groups[0] + "_" + groups[1];
+			} else {
+				// 否则回归武将主势力单势力士兵
+				to = "gz_shibing" + sex + group;
+			}
+		} else {
+			// 单势力武将（包括汉、雀、晋、野等）
+			to = "gz_shibing" + sex + group;
 		}
+		
+		game.log(this, "移除了" + (num ? "副将" : "主将"), "#b" + name);
+		
+		// 如果对应的士兵不存在，动态创建
+		if (!lib.character[to]) {
+			var charDef = [info[0], group, 0, [], [`character:${to.slice(3)}`, "unseen"]];
+			// 复制双势力属性
+			if (to.includes("_")) {
+				const parts = to.split("_");
+				const g1 = parts[parts.length - 2];
+				const g2 = parts[parts.length - 1];
+				charDef[1] = g1;
+				// @ts-expect-error 类型就是这么写的
+				charDef.majorSecondGroup = g2;
+			}
+			// @ts-expect-error 类型就是这么写的
+			lib.character[to] = charDef;
+			
+			// 设置士兵名称翻译
+			if (to.includes("_")) {
+				const parts = to.split("_");
+				const g1 = parts[parts.length - 2];
+				const g2 = parts[parts.length - 1];
+				lib.translate[to] = `${get.translation(g1)}${get.translation(g2)}兵`;
+			} else {
+				lib.translate[to] = `${get.translation(group)}兵`;
+			}
+		}
+		
 		this.reinit(name, to, false);
 		this.showCharacter(num, false);
 		// @ts-expect-error 类型就是这么写的
@@ -1170,12 +1212,31 @@ export class PlayerGuozhan extends Player {
 	}
 
 	/**
+	 * 变更主将
+	 * 
+	 * @param { boolean } [hidden] - 是否暗置变更后的主将
+	 * @returns { GameEvent | undefined }
+	 */
+	changeMain(hidden = false) {
+		var next = game.createEvent("changeMain");
+		// @ts-expect-error 类型就是这么写的
+		next.player = this;
+		if (hidden) {
+			// @ts-expect-error 类型就是这么写的
+			next.hidden = true;
+		}
+		// @ts-expect-error 类型就是这么写的
+		next.setContent("changeMain");
+		return next;
+	}
+
+	/**
 	 * 变更副将
 	 *
 	 * @param { boolean } [hidden] 是否暗置变更后的副将
 	 * @returns
 	 */
-	changeVice(hidden) {
+	changeVice(hidden = false) {
 		var next = game.createEvent("changeVice");
 		// @ts-expect-error 类型就是这么写的
 		next.player = this;

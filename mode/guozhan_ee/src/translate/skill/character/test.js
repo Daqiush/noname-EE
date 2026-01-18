@@ -7,6 +7,11 @@ export default {
 	gz_daqiush_show_info: "出牌阶段，你可以令一名角色明置主将或副将。",
 	gz_daqiush_infect: "传染",
 	gz_daqiush_infect_info: "出牌阶段，你可以将自己的副将传染给一名角色。",
+	gz_daqiush_changemain: "换主",
+	gz_daqiush_changemain_info: "出牌阶段，你可以令一名角色变更主将。",
+	gz_daqiush_remove: "移除",
+	gz_daqiush_remove_info: "出牌阶段，你可以令一名角色移除主将或副将。",
+
 	gz_daqiush_controlled_active: "受控（主）",
 	gz_daqiush_controlled_active_info: "失能。出牌阶段，你可以摸两张牌。",
 	gz_daqiush_enable_active: "使能（主）",
@@ -19,8 +24,9 @@ export default {
 	gz_daqiush_enable_passive_info: "出牌阶段，你可以使能技能“受控（被）”。",
 	gz_daqiush_disable_passive: "失能（被）",
 	gz_daqiush_disable_passive_info: "出牌阶段，你可以失能技能“受控（被）”。",
-	gz_miyanaga_teru_yumo: "玉魔",
-	gz_miyanaga_teru_yumo_info: "使能，明置技，将你的副将替换为天江衣。每个回合开始时，你失能此技能，秘密指定一个花色X，并断言本回合第一张由其他角色使用且有花色的牌的花色为此花色。</br>成功：使能【月冷】。从弃牌堆中获得此牌。</br>失败：使能【玉魔】。",
+
+	miyanaga_teru_yumo: "玉魔",
+	miyanaga_teru_yumo_info: "使能，明置技，将你的副将替换为天江衣。每个回合开始时，你失能此技能，秘密指定一个花色X，并断言本回合第一张由其他角色使用且有花色的牌的花色为此花色。</br>成功：使能【月冷】。本回合结束时，从弃牌堆中获得此牌。</br>失败：使能【玉魔】。",
 	gz_miyanaga_teru_yueleng: "月冷",
 	gz_miyanaga_teru_yueleng_info: "",
 	gz_miyanaga_teru_yueqing: "月清",

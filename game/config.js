@@ -17,7 +17,7 @@ window.config = {
 	connect_zhinang_tricks: ["guohe", "wuxie", "wuzhong", "dongzhuxianji"],
 	all: {
 		sgscharacters: ["standard", "shenhua", "refresh", "yijiang", "newjiang", "sixiang", "sp", "sp2", "xianding", "huicui", "extra", "old", "mobile", "shiji", "bingshi", "tw", "yingbian", "offline", "jsrg", "sxrm", "sb", "clan", "collab", "onlyOL", "guozhan_ee"],
-		sgscards: ["standard", "extra", "sp", "guozhan", "zhulu", "yingbian", "yongjian"],
+		sgscards: ["standard", "extra", "sp", "guozhan", "guozhan_ee","zhulu", "yingbian", "yongjian"],
 		sgsmodes: ["identity", "guozhan", "versus", "doudizhu", "single", "brawl", "connect", "guozhan_ee"],
 		stockmode: ["identity", "guozhan", "versus", "boss", "doudizhu", "single", "chess", "stone", "connect", "brawl", "tafang", "guozhan_ee"],
 		stockextension: ["boss", "cardpile", "coin"],
@@ -134,7 +134,7 @@ window.config = {
 	moderned_chracters: ["standard", "shenhua", "sp", "sp2", "yijiang", "newjiang", "sixiang", "refresh", "mobile", "extra", "yingbian", "sb", "tw", "offline", "clan", "collab", "xianding", "huicui", "shiji", "bingshi", "onlyOL", "jsrg", "sxrm", "old", "diy", "key", "guozhan_ee"],
 	moderned_modes: ["guozhan", "guozhan_ee"],
 	connect_characters: ["diy"],
-	connect_cards: ["huodong", "guozhan", "sp", "zhulu", "yingbian", "yongjian", "xianxia"],
+	connect_cards: ["huodong", "guozhan", "guozhan_ee", "sp", "zhulu", "yingbian", "yongjian", "xianxia"],
 	plays: [],
 	extensions: [],
 	banned: [],

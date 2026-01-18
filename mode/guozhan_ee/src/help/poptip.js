@@ -1,6 +1,6 @@
 import { lib, game, ui, get, ai, _status } from "../../../../noname.js";
 
-lib.poptip.addType("guozhan");
+lib.poptip.addType("guozhan_ee");
 
 const guozhanPoptip = new Map([
 	["guozhan_mainSkill", { name: "主将技", info: "此武将牌为主武将时方能使用的技能。" }],
@@ -17,7 +17,7 @@ poptips.forEach(poptip => {
 	// @ts-expect-error 祖宗之法就是这么做的
 	lib.poptip.add({
 		id: poptip,
-		type: "guozhan",
+		type: "guozhan_ee",
 		...guozhanPoptip.get(poptip),
 	});
 });

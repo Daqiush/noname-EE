@@ -37,7 +37,7 @@ export default {
 		forced: true,
 		priority: 22,
 		filter(event, player) {
-			if (get.mode() != "guozhan") {
+			if (get.mode() != "guozhan_ee") {
 				return false;
 			}
 			if (_status.connectMode && !lib.configOL.aozhan) {

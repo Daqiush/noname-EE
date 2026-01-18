@@ -40,6 +40,7 @@ window.noname_package = {
 		standard: "标准",
 		extra: "军争",
 		guozhan: "国战",
+		guozhan_ee: "黄金国战",
 		yingbian: "应变篇",
 		yongjian: "用间篇",
 		sp: "忠胆英杰",
