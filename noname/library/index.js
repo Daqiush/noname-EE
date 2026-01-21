@@ -6881,14 +6881,14 @@ export class Library {
 				},
 				connect_junzhu: {
 					name: "替换君主",
-					init: true,
+					init: false,
 					// frequent:true,
 					restart: true,
 					intro: "若开启此选项，玩家的第一个回合开始时，若其主武将牌有对应的君主武将牌且场上没有同势力的君主，则其可以将此武将牌替换为对应的君主武将牌，然后重新调整体力上限。若玩家的体力上限因此增大，则玩家回复等量的体力。",
 				},
 				connect_jinEx: {
 					name: "文德武备",
-					init: true,
+					init: false,
 					restart: true,
 					intro: "若开启此选项，晋势力武将将使用OL【文德武备】版本；否则使用线下【紫气东来】【受命于天】版本。",
 				},
@@ -7025,7 +7025,7 @@ export class Library {
 				},
 				changeViceType: {
 					name: "副将变更方式",
-					init: "default",
+					init: "online",
 					item: {
 						default: "发现式",
 						online: "随机式",
@@ -7049,14 +7049,14 @@ export class Library {
 				},
 				junzhu: {
 					name: "替换君主",
-					init: true,
+					init: false,
 					// frequent:true,
 					restart: true,
 					intro: "若开启此选项，玩家的第一个回合开始时，若其主武将牌有对应的君主武将牌，则其可以将此武将牌替换为对应的君主武将牌，然后重新调整体力上限。若玩家的体力上限因此增大，则玩家回复等量的体力。",
 				},
 				jinEx: {
 					name: "文德武备",
-					init: true,
+					init: false,
 					restart: true,
 					intro: "若开启此选项，晋势力武将将使用OL【文德武备】版本；否则使用线下【紫气东来】【受命于天】版本。",
 				},
@@ -7201,7 +7201,7 @@ export class Library {
 				},
 				choice_num: {
 					name: "候选武将数",
-					init: "7",
+					init: "8",
 					restart: true,
 					item: {
 						5: "五",

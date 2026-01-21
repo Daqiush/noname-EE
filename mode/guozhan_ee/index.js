@@ -51,6 +51,7 @@ export default {
 	// 特定配置下所需要的内容
 	junList: info.junList,
 	guozhanPile_old: info.pile.old,
+	guozhanPile_yingbian: info.pile.yingbian,
 
 	// 模式自行提供的垫片函数
 	game: gamePatch,

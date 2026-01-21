@@ -4,32 +4,32 @@ game.import("card", function () {
 		name: "guozhan_ee",
 		connect: true,
 		card: {
-			minguangkai: {
+			minguangkai_ee: {
 				audio: true,
 				mode: ["guozhan_ee"],
 				fullskin: true,
 				type: "equip",
 				subtype: "equip2",
-				skills: ["minguangkai_cancel", "minguangkai_link"],
+				skills: ["minguangkai_ee_cancel", "minguangkai_ee_link"],
 				ai: {
 					basic: {
 						equipValue: 6,
 					},
 				},
 			},
-			yuxi: {
+			chuanguoyuxi_ee: {
 				audio: true,
 				mode: ["guozhan_ee"],
 				bingzhu: ["刘宏", "袁术", "司马炎"],
 				fullskin: true,
 				type: "equip",
 				subtype: "equip5",
-				skills: ["yuxi_skill"],
+				skills: ["chuanguoyuxi_ee_skill"],
 				ai: {
 					equipValue: 9,
 				},
 			},
-			xietianzi: {
+			xietianzi_ee: {
 				audio: true,
 				fullskin: true,
 				type: "trick",
@@ -37,7 +37,7 @@ game.import("card", function () {
 					if (get.mode() == "guozhan_ee" && !player.isMajor()) {
 						return false;
 					}
-					if (player.hasSkill("xietianzi")) {
+					if (player.hasSkill("xietianzi_ee")) {
 						return false;
 					}
 					if (_status.currentPhase != player) {
@@ -59,7 +59,7 @@ game.import("card", function () {
 					if (evt && evt.name == "phaseUse") {
 						evt.skipped = true;
 					}
-					target.addTempSkill("xietianzi");
+					target.addTempSkill("xietianzi_ee");
 				},
 				ai: {
 					order: 0.5,
@@ -75,7 +75,7 @@ game.import("card", function () {
 					},
 				},
 			},
-			shuiyanqijunx: {
+			shuiyanqijun_ee: {
 				audio: true,
 				fullskin: true,
 				type: "trick",
@@ -90,14 +90,14 @@ game.import("card", function () {
 					if (event.card.yingbian_all) {
 						target.discard(
 							target.getCards("e", function (card) {
-								return lib.filter.cardDiscardable(card, target, "shuiyanqijunx");
+								return lib.filter.cardDiscardable(card, target, "shuiyanqijun_ee");
 							})
 						);
 						target.damage("thunder");
 						event.finish();
 					} else if (
 						!target.countCards("e", function (card) {
-							return lib.filter.cardDiscardable(card, target, "shuiyanqijunx");
+							return lib.filter.cardDiscardable(card, target, "shuiyanqijun_ee");
 						})
 					) {
 						var next = target.damage();
@@ -126,7 +126,7 @@ game.import("card", function () {
 									return "discard_card";
 								}
 								if (
-									lib.skill.huxinjing.filter(
+									lib.skill.huxinjing_ee.filter(
 										{
 											player: player,
 											card: event.card,
@@ -150,7 +150,7 @@ game.import("card", function () {
 					if (result.control == "discard_card") {
 						target.discard(
 							target.getCards("e", function (card) {
-								return lib.filter.cardDiscardable(card, target, "shuiyanqijunx");
+								return lib.filter.cardDiscardable(card, target, "shuiyanqijun_ee");
 							})
 						);
 					} else {
@@ -245,7 +245,7 @@ game.import("card", function () {
 					},
 				},
 			},
-			lulitongxin: {
+			lulitongxin_ee: {
 				fullskin: true,
 				audio: true,
 				type: "trick",
@@ -266,7 +266,7 @@ game.import("card", function () {
 						if (get.mode() == "versus") {
 							return current.isFriendOf(target);
 						}
-						return current.isMajor() == target.isMajor() && current != target && !current.hasSkill("diaohulishan");
+						return current.isMajor() == target.isMajor() && current != target && !current.hasSkill("diaohulishan_ee");
 					}, targets);
 				},
 				content() {
@@ -313,7 +313,7 @@ game.import("card", function () {
 					},
 				},
 			},
-			lianjunshengyan: {
+			lianjunshengyan_ee: {
 				fullskin: true,
 				audio: true,
 				type: "trick",
@@ -339,7 +339,7 @@ game.import("card", function () {
 						targets.push(player);
 						if (target.identity != "ye") {
 							game.filterPlayer(function (current) {
-								return target != current && target.isFriendOf(current) && !current.hasSkill("diaohulishan");
+								return target != current && target.isFriendOf(current) && !current.hasSkill("diaohulishan_ee");
 							}, targets);
 						}
 					}
@@ -425,7 +425,7 @@ game.import("card", function () {
 					},
 				},
 			},
-			chiling: {
+			chiling_ee: {
 				fullskin: true,
 				audio: true,
 				type: "trick",
@@ -435,7 +435,7 @@ game.import("card", function () {
 					});
 				},
 				mode: ["guozhan_ee"],
-				//global:['g_chiling1','g_chiling2','g_chiling3'],
+				//global:['g_chiling_ee1','g_chiling_ee2','g_chiling_ee3'],
 				filterTarget(card, player, target) {
 					return target.isUnseen();
 				},
@@ -472,7 +472,7 @@ game.import("card", function () {
 					if (target.countCards("he", { type: "equip" })) {
 						choiceList.push("弃置一张装备牌");
 					}
-					target.chooseControl(lib.card.chiling.chooseai).set("prompt", "敕令").set("choiceList", choiceList);
+					target.chooseControl(lib.card.chiling_ee.chooseai).set("prompt", "敕令").set("choiceList", choiceList);
 					"step 1";
 					var index = result.index;
 					if (event.nomingzhi) {
@@ -512,8 +512,8 @@ game.import("card", function () {
 				onDestroy() {
 					var currentPhase = _status.currentPhase;
 					if (currentPhase) {
-						_status.chiling = true;
-						currentPhase.addTempSkill("g_chiling3");
+						_status.chiling_ee = true;
+						currentPhase.addTempSkill("g_chiling_ee3");
 					}
 					if (!lib.inpile.includes("zhaoshu")) {
 						lib.inpile.push("zhaoshu");
@@ -534,18 +534,18 @@ game.import("card", function () {
 					},
 				},
 			},
-			diaohulishan: {
+			diaohulishan_ee: {
 				fullskin: true,
 				audio: true,
 				type: "trick",
 				enable: true,
-				global: "g_diaohulishan",
+				global: "g_diaohulishan_ee",
 				filterTarget(card, player, target) {
 					return target != player;
 				},
 				selectTarget: [1, 2],
 				content() {
-					target.addTempSkill("diaohulishan");
+					target.addTempSkill("diaohulishan_ee");
 				},
 				ai: {
 					order(item, player) {
@@ -554,7 +554,7 @@ game.import("card", function () {
 						}
 						if (
 							player.hasCard(function (card) {
-								return ["gz_haolingtianxia", "gz_guguoanbang", "gz_kefuzhongyuan", "wuzhong", "yuanjiao", "lianjunshengyan", "lulitongxin", "yiyi"].includes(get.name(card));
+								return ["gz_haolingtianxia", "gz_guguoanbang", "gz_kefuzhongyuan", "wuzhong", "yuanjiao_ee", "lianjunshengyan_ee", "lulitongxin_ee", "yiyi_ee"].includes(get.name(card));
 							}, "hs")
 						) {
 							return 3.5;
@@ -595,12 +595,12 @@ game.import("card", function () {
 					},
 				},
 			},
-			huxinjing: {
+			huxinjing_ee: {
 				fullskin: true,
 				type: "equip",
 				subtype: "equip2",
 				cardcolor: "club",
-				skills: ["huxinjing"],
+				skills: ["huxinjing_ee"],
 				filterTarget(card, player, target) {
 					if (get.mode() == "guozhan_ee" && player != target) {
 						return false;
@@ -617,7 +617,7 @@ game.import("card", function () {
 					},
 				},
 			},
-			huoshaolianying: {
+			huoshaolianying_ee: {
 				fullskin: true,
 				audio: true,
 				type: "trick",
@@ -701,7 +701,7 @@ game.import("card", function () {
 					},
 				},
 			},
-			yuanjiao: {
+			yuanjiao_ee: {
 				audio: true,
 				fullskin: true,
 				type: "trick",
@@ -747,7 +747,7 @@ game.import("card", function () {
 					},
 				},
 			},
-			zhibi: {
+			zhibi_ee: {
 				audio: true,
 				fullskin: true,
 				type: "trick",
@@ -761,10 +761,10 @@ game.import("card", function () {
 				},
 				content() {
 					"step 0";
-					if (!player.storage.zhibi) {
-						player.storage.zhibi = [];
+					if (!player.storage.zhibi_ee) {
+						player.storage.zhibi_ee = [];
 					}
-					player.storage.zhibi.add(target);
+					player.storage.zhibi_ee.add(target);
 					var controls = [];
 					if (target.countCards("h")) {
 						controls.push("手牌");
@@ -820,7 +820,7 @@ game.import("card", function () {
 							if (player.countCards("h") <= player.hp) {
 								return 0;
 							}
-							if (player.storage.zhibi && player.storage.zhibi.includes(target)) {
+							if (player.storage.zhibi_ee && player.storage.zhibi_ee.includes(target)) {
 								return 0;
 							}
 							return target.isUnseen() ? 1 : 0;
@@ -828,7 +828,7 @@ game.import("card", function () {
 					},
 				},
 			},
-			yiyi: {
+			yiyi_ee: {
 				audio: true,
 				fullskin: true,
 				type: "trick",
@@ -880,7 +880,7 @@ game.import("card", function () {
 									if (y > 0 && ui.selected.cards.includes(card)) {
 										return false;
 									}
-									if (!y && get.name(card) === "yiyi") {
+									if (!y && get.name(card) === "yiyi_ee") {
 										y = -1;
 										return false;
 									}
@@ -904,11 +904,11 @@ game.import("card", function () {
 					},
 				},
 			},
-			wuliu: {
+			wuliu_ee: {
 				fullskin: true,
 				type: "equip",
 				subtype: "equip1",
-				global: "g_wuliu_skill",
+				global: "g_wuliu_ee_skill",
 				distance: { attackFrom: -1 },
 				ai: {
 					equipValue(card, player) {
@@ -927,11 +927,11 @@ game.import("card", function () {
 						equipValue: 3,
 					},
 				},
-				skills: ["wuliu_skill"],
+				skills: ["wuliu_ee_skill"],
 				mode: ["guozhan_ee"],
 				bingzhu: ["孙权"],
 			},
-			sanjian: {
+			sanjian_ee: {
 				fullskin: true,
 				type: "equip",
 				subtype: "equip1",
@@ -942,9 +942,9 @@ game.import("card", function () {
 						equipValue: 4,
 					},
 				},
-				skills: ["sanjian_skill"],
+				skills: ["sanjian_ee_skill"],
 			},
-			jingfanma: {
+			jingfanma_ee: {
 				fullskin: true,
 				type: "equip",
 				subtype: "equip4",
@@ -952,7 +952,7 @@ game.import("card", function () {
 			},
 		},
 		skill: {
-			minguangkai_cancel: {
+			minguangkai_ee_cancel: {
 				equipSkill: true,
 				trigger: { target: "useCardToTarget" },
 				forced: true,
@@ -960,7 +960,7 @@ game.import("card", function () {
 					return get.effect(event.target, event.card, event.player, player) < 0;
 				},
 				filter(event, player) {
-					if (["huoshaolianying", "huogong"].includes(event.card.name)) {
+					if (["huoshaolianying_ee", "huogong"].includes(event.card.name)) {
 						return true;
 					}
 					if (event.card.name == "sha") {
@@ -974,14 +974,14 @@ game.import("card", function () {
 				ai: {
 					effect: {
 						target(card, player, target, current) {
-							if (["huoshaolianying", "huogong"].includes(card.name) || (card.name == "sha" && game.hasNature(card, "fire"))) {
+							if (["huoshaolianying_ee", "huogong"].includes(card.name) || (card.name == "sha" && game.hasNature(card, "fire"))) {
 								return "zeroplayertarget";
 							}
 						},
 					},
 				},
 			},
-			minguangkai_link: {
+			minguangkai_ee_link: {
 				equipSkill: true,
 				trigger: { player: "linkBefore" },
 				forced: true,
@@ -995,7 +995,7 @@ game.import("card", function () {
 					noLink: true,
 				},
 			},
-			yuxi_skill: {
+			chuanguoyuxi_ee_skill: {
 				equipSkill: true,
 				trigger: { player: "phaseDrawBegin2" },
 				forced: true,
@@ -1009,9 +1009,9 @@ game.import("card", function () {
 					threaten: 1.3,
 					forceMajor: true,
 				},
-				group: "yuxi_skill2",
+				group: "chuanguoyuxi_ee_skill2",
 			},
-			yuxi_skill2: {
+			chuanguoyuxi_ee_skill2: {
 				equipSkill: true,
 				trigger: { player: "phaseUseBegin" },
 				forced: true,
@@ -1020,14 +1020,14 @@ game.import("card", function () {
 						return false;
 					}
 					return game.hasPlayer(function (current) {
-						return player.canUse("zhibi", current);
+						return player.canUse("zhibi_ee", current);
 					});
 				},
 				content() {
-					player.chooseUseTarget("玉玺：选择知己知彼的目标", { name: "zhibi" });
+					player.chooseUseTarget("玉玺：选择知己知彼的目标", { name: "zhibi_ee" });
 				},
 			},
-			xietianzi: {
+			xietianzi_ee: {
 				forced: true,
 				popup: false,
 				nopop: true,
@@ -1039,7 +1039,7 @@ game.import("card", function () {
 				},
 				content() {
 					"step 0";
-					player.removeSkill("xietianzi");
+					player.removeSkill("xietianzi_ee");
 					player.chooseToDiscard("h", "是否弃置一张手牌并获得一个额外回合？").set("ai", function (card) {
 						return 10 - get.value(card);
 					});
@@ -1049,17 +1049,17 @@ game.import("card", function () {
 					}
 				},
 			},
-			g_chiling3: {
+			g_chiling_ee3: {
 				mode: ["guozhan_ee"],
 				trigger: { player: "phaseEnd" },
 				forced: true,
 				popup: false,
 				filter() {
-					return _status.chiling == true;
+					return _status.chiling_ee == true;
 				},
 				content() {
 					"step 0";
-					_status.chiling = false;
+					_status.chiling_ee = false;
 					var targets = game.filterPlayer(function (target) {
 						return target.isUnseen();
 					});
@@ -1073,7 +1073,7 @@ game.import("card", function () {
 						if (target.countCards("he", { type: "equip" })) {
 							choiceList.push("弃置一张装备牌");
 						}
-						target.chooseControl(lib.card.chiling.chooseai).set("prompt", "敕令").set("choiceList", choiceList);
+						target.chooseControl(lib.card.chiling_ee.chooseai).set("prompt", "敕令").set("choiceList", choiceList);
 					} else {
 						event.finish();
 					}
@@ -1103,8 +1103,8 @@ game.import("card", function () {
 					event.goto(1);
 				},
 			},
-			g_diaohulishan: {},
-			diaohulishan: {
+			g_diaohulishan_ee: {},
+			diaohulishan_ee: {
 				charlotte: true,
 				group: "undist",
 				init(player) {
@@ -1124,7 +1124,7 @@ game.import("card", function () {
 					}
 				},
 			},
-			huxinjing: {
+			huxinjing_ee: {
 				equipSkill: true,
 				trigger: { player: "damageBegin4" },
 				// forced:true,
@@ -1132,7 +1132,7 @@ game.import("card", function () {
 					if (event.num < player.hp && (get.mode() == "guozhan_ee" || event.num <= 1)) {
 						return false;
 					}
-					let cards = player.getEquips("huxinjing");
+					let cards = player.getEquips("huxinjing_ee");
 					if (!cards.length) {
 						return false;
 					}
@@ -1153,17 +1153,17 @@ game.import("card", function () {
 				},
 				content() {
 					trigger.cancel();
-					var e2 = player.getEquips("huxinjing");
+					var e2 = player.getEquips("huxinjing_ee");
 					if (e2.length) {
 						player.discard(e2);
 					}
-					player.removeSkill("huxinjing");
+					player.removeSkill("huxinjing_ee");
 				},
 			},
-			wuliu_skill: {
+			wuliu_ee_skill: {
 				equipSkill: true,
 			},
-			g_wuliu_skill: {
+			g_wuliu_ee_skill: {
 				equipSkill: true,
 				mod: {
 					attackRange(player, distance) {
@@ -1173,7 +1173,7 @@ game.import("card", function () {
 								if (current == player || !current.isFriendOf(player)) {
 									return false;
 								}
-								if (current.hasSkill("wuliu_skill")) {
+								if (current.hasSkill("wuliu_ee_skill")) {
 									return true;
 								}
 							})
@@ -1181,7 +1181,7 @@ game.import("card", function () {
 					},
 				},
 			},
-			sanjian_skill: {
+			sanjian_ee_skill: {
 				equipSkill: true,
 				audio: true,
 				trigger: { source: "damageSource" },
@@ -1223,12 +1223,12 @@ game.import("card", function () {
 								var player = _status.event.player;
 								return get.damageEffect(target, player, player);
 							},
-							prompt: get.prompt("sanjian"),
+							prompt: get.prompt("sanjian_ee"),
 						})
 						.set("damaged", damaged);
 					"step 1";
 					if (result.bool) {
-						player.logSkill("sanjian_skill", result.targets);
+						player.logSkill("sanjian_ee_skill", result.targets);
 						player.discard(result.cards);
 						result.targets[0].damage();
 					}
@@ -1236,87 +1236,87 @@ game.import("card", function () {
 			},
 		},
 		translate: {
-			minguangkai: "明光铠",
-			minguangkai_cancel: "明光铠",
-			minguangkai_link: "明光铠",
-			minguangkai_info: "锁定技。①当你成为【火烧连营】、【火攻】或火【杀】的目标时，取消之。②当你即将横置前，若你是小势力角色，取消之。",
-			yuxi_skill: "玉玺",
-			yuxi_skill2: "玉玺",
-			yuxi: "玉玺",
-			yuxi_info: "锁定技。若你有明置的武将牌，则：①你的势力视为唯一的大势力。②摸牌阶段开始时，你令额定摸牌数+1。③出牌阶段开始时，你视为使用【知己知彼】。",
-			xietianzi: "挟令",
-			xietianzi_info: "出牌阶段，对自己使用。你结束出牌阶段。本回合的弃牌阶段结束时，你可以弃置一张手牌，获得一个额外的回合。",
-			xietianzi_info_guozhan: "出牌阶段，对身为大势力角色的自己使用。你结束出牌阶段。本回合的弃牌阶段结束时，你可以弃置一张手牌，获得一个额外的回合。",
-			shuiyanqijunx: "水淹七军",
-			shuiyanqijunx_info: "出牌阶段，对一名其他角色使用。目标角色选择一项：⒈弃置装备区里的所有牌（至少一张）。⒉受到你造成的1点雷电伤害。",
-			shuiyanqijunx_info_guozhan: "出牌阶段，对一名装备区里有牌的其他角色使用。目标角色选择一项：⒈弃置装备区里的所有牌。⒉受到你造成的1点雷电伤害。",
-			lulitongxin: "勠力同心",
-			lulitongxin_info: "出牌阶段，对所有大势力角色或所有小势力角色使用。若目标角色：未横置，则其横置；已横置，则其摸一张牌。",
-			lulitongxin_info_versus: "出牌阶段，对所有己方角色或所有敌方角色使用。若目标角色：未横置，则其横置；已横置，则其摸一张牌。",
-			lianjunshengyan: "联军盛宴",
-			lianjunshengyan_info: "出牌阶段，对你和你选择的除你的势力外的一个势力的所有角色使用。若目标角色：为你，你选择摸Y张牌并回复X-Y点体力（X为该势力的角色数，Y∈[0,X]）；不为你，其摸一张牌，然后重置。",
-			lianjunshengyan_info_boss: "出牌阶段，对场上所有角色使用。你摸X张牌（X为存活角色数），其他角色依次选择回复1点体力或摸一张牌。",
-			chiling: "敕令",
-			chiling_info: "①出牌阶段，对所有没有势力的角色使用。目标角色选择一项：1、明置一张武将牌，然后摸一张牌；2、弃置一张装备牌；3、失去1点体力。②当【敕令】因判定或弃置而置入弃牌堆时，系统将之移出游戏并将【诏书】置于牌堆底，然后系统于当前回合结束后视为对所有没有势力的角色使用【敕令】。",
-			diaohulishan: "调虎离山",
-			diaohulishan_info: "出牌阶段，对至多两名其他角色使用。目标角色于此回合视为移出游戏。",
-			huoshaolianying: "火烧连营",
-			huoshaolianying_bg: "烧",
-			huoshaolianying_info_guozhan: "出牌阶段，对你的下家及其队列中的所有角色使用。你对目标角色造成1点火属性伤害。",
-			huoshaolianying_info: "出牌阶段，对距离最小的一名横置角色使用（若无横置角色，则改为对距离最小的所有角色使用），你对目标造成1点火属性伤害。",
-			yuanjiao: "远交近攻",
-			yuanjiao_info: "出牌阶段，对一名与你势力不同的其他角色使用。其摸一张牌，然后你摸三张牌。",
-			yuanjiao_info_guozhan: "出牌阶段，对一名与你势力不同且已确定势力的其他角色使用。其摸一张牌，然后你摸三张牌。",
-			yuanjiao_bg: "交",
-			zhibi: "知己知彼",
-			zhibi_info: "出牌阶段，对一名有手牌或有暗置武将牌的其他角色使用。你选择一项：⒈观看其手牌。⒉观看其的一张暗置武将牌。",
-			yiyi: "以逸待劳",
-			yiyi_info_guozhan: "出牌阶段，对所有己方角色使用。目标角色摸两张牌，然后弃置两张牌。",
-			yiyi_info_combat: "出牌阶段，对所有己方角色使用。目标角色摸两张牌，然后弃置两张牌。",
-			yiyi_info: "出牌阶段，对至多三名角色使用。目标角色摸两张牌，然后弃置两张牌。",
-			yiyi_bg: "逸",
-			wuliu: "吴六剑",
-			wuliu_info: "锁定技。与你势力相同的所有其他角色的攻击范围+1。",
-			sanjian: "三尖两刃刀",
-			sanjian_info: "当你因执行【杀】而对A造成伤害后，你可以弃置一张牌并选择一名其他角色B（A至B的距离需为1）。你对B造成1点伤害。",
-			wuliu_skill: "吴六剑",
-			sanjian_skill: "三尖两刃刀",
-			jingfanma_bg: "-马",
-			jingfanma: "惊帆",
-			jingfanma_info: "锁定技，你计算与其他角色的距离-1。",
-			huxinjing_bg: "镜",
-			huxinjing: "护心镜",
-			huxinjing_info: "当你受到伤害时，若伤害值大于等于你的体力值，则你可以将所有【护心镜】置入弃牌堆，然后防止此伤害。",
-			huxinjing_info_guozhan: "当你受到伤害时，若伤害值大于等于你的体力值，则你可以将所有【护心镜】置入弃牌堆，然后防止此伤害。",
+			minguangkai_ee: "明光铠",
+			minguangkai_ee_cancel: "明光铠",
+			minguangkai_ee_link: "明光铠",
+			minguangkai_ee_info: "锁定技。①当你成为【火烧连营】、【火攻】或火【杀】的目标时，取消之。②当你即将横置前，若你是小势力角色，取消之。",
+			chuanguoyuxi_ee_skill: "玉玺",
+			chuanguoyuxi_ee_skill2: "玉玺",
+			chuanguoyuxi_ee: "传国玉玺",
+			chuanguoyuxi_ee_info: "锁定技。若你已确定势力，则：①你的势力视为唯一的大势力。②摸牌阶段开始时，你令额定摸牌数+1。③出牌阶段开始时，你视为使用【知己知彼】。",
+			xietianzi_ee: "挟令",
+			xietianzi_ee_info: "1",
+			xietianzi_ee_info_guozhan_ee: "出牌阶段，对身为大势力角色的自己使用。若目前为你的出牌阶段，你结束出牌阶段，且本回合的弃牌阶段结束时，你可以弃置一张手牌，获得一个额外的回合。",
+			shuiyanqijun_ee: "水淹七军",
+			shuiyanqijun_ee_info: "1",
+			shuiyanqijun_ee_info_guozhan_ee: "出牌阶段，对一名装备区里有牌的其他角色使用。目标角色选择一项：⒈弃置装备区里的所有牌。⒉受到你造成的1点雷电伤害。",
+			lulitongxin_ee: "勠力同心",
+			lulitongxin_ee_info: "出牌阶段，对所有大势力角色或所有小势力角色使用。若目标角色：未横置，则其横置；已横置，则其摸一张牌。",
+			lulitongxin_ee_info_versus: "1",
+			lianjunshengyan_ee: "联军盛宴",
+			lianjunshengyan_ee_info: "出牌阶段，对你和你选择的除你的势力外的一个势力的所有角色使用。若目标角色：为你，你选择摸Y张牌并回复X-Y点体力（X为该势力的角色数，Y∈[0,X]）；不为你，其摸一张牌，然后重置。",
+			lianjunshengyan_ee_info_boss: "1",
+			chiling_ee: "敕令",
+			chiling_ee_info: "①出牌阶段，对所有未确定势力的角色使用。目标角色选择一项：1、明置一张武将牌，然后摸一张牌；2、弃置一张装备牌；3、失去1点体力。②当【敕令】因判定或弃置而置入弃牌堆时，系统将之移出游戏并将【诏书】置于牌堆底，然后系统于当前回合结束后视为对所有没有势力的角色使用【敕令】。",
+			diaohulishan_ee: "调虎离山",
+			diaohulishan_ee_info: "出牌阶段，对至多两名其他角色使用。目标角色于此回合：不能使用牌、不是牌的合法目标、体力值不会变化、不计入距离或座次的结算。",
+			huoshaolianying_ee: "火烧连营",
+			huoshaolianying_ee_bg: "烧",
+			huoshaolianying_ee_info_guozhan_ee: "出牌阶段，若你的下家不在/在队列中，对其/其所在所有队列中的所有角色使用。你对目标角色造成1点火属性伤害。",
+			huoshaolianying_ee_info: "1",
+			yuanjiao_ee: "远交近攻",
+			yuanjiao_ee_info: "1",
+			yuanjiao_ee_info_guozhan_ee: "出牌阶段，对一名与你势力不同且已确定势力的其他角色使用。其摸一张牌，然后你摸三张牌。",
+			yuanjiao_ee_bg: "交",
+			zhibi_ee: "知己知彼",
+			zhibi_ee_info: "出牌阶段，对一名有手牌或有暗置武将牌的其他角色使用。你选择一项：⒈观看其手牌。⒉观看其的一张暗置武将牌。",
+			yiyi_ee: "以逸待劳",
+			yiyi_ee_info_guozhan_ee: "出牌阶段，对所有己方角色使用。目标角色摸两张牌，然后弃置两张牌。",
+			yiyi_ee_info_combat: "1",
+			yiyi_ee_info: "1",
+			yiyi_ee_bg: "逸",
+			wuliu_ee: "吴六剑",
+			wuliu_ee_info: "锁定技。与你势力相同的所有其他角色的攻击范围+1。",
+			wuliu_ee_skill: "吴六剑",
+			sanjian_ee: "三尖两刃刀",
+			sanjian_ee_info: "当你因执行【杀】而对A造成伤害后，你可以弃置一张牌并选择一名其他角色B（A至B的距离需为1）。你对B造成1点伤害。",
+			sanjian_ee_skill: "三尖两刃刀",
+			jingfanma_ee_bg: "-马",
+			jingfanma_ee: "惊帆",
+			jingfanma_ee_info: "锁定技，你计算与其他角色的距离-1。",
+			huxinjing_ee_bg: "镜",
+			huxinjing_ee: "护心镜",
+			huxinjing_ee_info: "1",
+			huxinjing_ee_info_guozhan_ee: "当你受到伤害时，若伤害值大于等于你的体力值，则你可以将所有【护心镜】置入弃牌堆，然后防止此伤害。",
 		},
 		list: [
-			["heart", 9, "yuanjiao"],
-			["club", 3, "zhibi"],
-			["club", 4, "zhibi"],
-			["diamond", 4, "yiyi"],
-			["heart", 11, "yiyi"],
-			["diamond", 6, "wuliu"],
-			["diamond", 12, "sanjian"],
-			["heart", 3, "jingfanma"],
+			["heart", 9, "yuanjiao_ee"],
+			["club", 3, "zhibi_ee"],
+			["club", 4, "zhibi_ee"],
+			["diamond", 4, "yiyi_ee"],
+			["heart", 11, "yiyi_ee"],
+			["diamond", 6, "wuliu_ee"],
+			["diamond", 12, "sanjian_ee"],
+			["heart", 3, "jingfanma_ee"],
 			["spade", 4, "shunshou"],
 			["spade", 12, "guohe"],
 			["spade", 11, "wuxie"],
-			["spade", 3, "huoshaolianying", "fire"],
-			["club", 11, "huoshaolianying", "fire"],
-			["heart", 12, "huoshaolianying", "fire"],
-			["club", 2, "huxinjing"],
-			["heart", 2, "diaohulishan"],
-			["diamond", 10, "diaohulishan"],
-			["heart", 1, "lianjunshengyan"],
-			["club", 3, "chiling"],
-			["spade", 12, "lulitongxin"],
-			["club", 10, "lulitongxin"],
-			["club", 12, "shuiyanqijunx"],
-			["heart", 13, "shuiyanqijunx"],
-			["spade", 1, "xietianzi"],
-			["diamond", 1, "xietianzi"],
-			["diamond", 4, "xietianzi"],
-			["club", 1, "yuxi"],
+			["spade", 3, "huoshaolianying_ee", "fire"],
+			["club", 11, "huoshaolianying_ee", "fire"],
+			["heart", 12, "huoshaolianying_ee", "fire"],
+			["club", 2, "huxinjing_ee"],
+			["heart", 2, "diaohulishan_ee"],
+			["diamond", 10, "diaohulishan_ee"],
+			["heart", 1, "lianjunshengyan_ee"],
+			["club", 3, "chiling_ee"],
+			["spade", 12, "lulitongxin_ee"],
+			["club", 10, "lulitongxin_ee"],
+			["club", 12, "shuiyanqijun_ee"],
+			["heart", 13, "shuiyanqijun_ee"],
+			["spade", 1, "xietianzi_ee"],
+			["diamond", 1, "xietianzi_ee"],
+			["diamond", 4, "xietianzi_ee"],
+			["club", 1, "chuanguoyuxi_ee"],
 		],
 	};
 });
