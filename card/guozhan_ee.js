@@ -1000,7 +1000,7 @@ game.import("card", function () {
 				trigger: { player: "phaseDrawBegin2" },
 				forced: true,
 				filter(event, player) {
-					return !player.isUnseen() && !event.numFixed;
+					return !player.isUndetermined() && !event.numFixed;
 				},
 				content() {
 					trigger.num++;
@@ -1016,7 +1016,7 @@ game.import("card", function () {
 				trigger: { player: "phaseUseBegin" },
 				forced: true,
 				filter(event, player) {
-					if (player.isUnseen()) {
+					if (player.isUndetermined()) {
 						return false;
 					}
 					return game.hasPlayer(function (current) {

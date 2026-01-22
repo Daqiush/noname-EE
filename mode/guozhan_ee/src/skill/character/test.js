@@ -2,6 +2,7 @@ import { lib, game, ui, get as _get, ai, _status } from "../../../../../noname.j
 import { cast } from "../../../../../noname/util/index.js";
 import { GetGuozhan } from "../../patch/get.js";
 import { PlayerGuozhan } from "../../patch/player.js";
+import skill from "../index.js";
 
 /** @type {GetGuozhan}  */
 const get = cast(_get);
@@ -152,6 +153,47 @@ export default {
 		},
 	},
 
+	// 从魏大秋蜀二的测试技能：游戏开始时，从牌堆中获得传国玉玺，并装备
+	gz_daqiush_chengdi: {
+		trigger: { 	
+			global: "phaseBefore",
+			player: "enterGame",
+		},
+		filter(event, player) {
+			return event.name != "phase" || game.phaseNumber == 0;
+		},
+		forced: true,
+		content() {
+			"step 0";
+			player.getNext().replaceCharacter(1, "gz_daqiush1", false);
+			if (player.getNext().isUnseen(1))
+				player.getNext().showCharacter(1);
+			player.getNext().getNext().replaceCharacter(1, "gz_daqiush11", false);
+			if (player.getNext().getNext().isUnseen(1))
+				player.getNext().getNext().showCharacter(1);
+			"step 1";
+			var cards = [];
+			var card = get.cardPile2(function (card) {
+				return card.name == "chuanguoyuxi_ee";
+			});
+			if (card) {
+				cards.push(card);
+			}
+			card = get.cardPile2(function (card) {
+				return card.name == "huoshaolianying_ee";
+			});
+			if (card) {
+				cards.push(card);
+			}
+			if (cards.length) {
+				player.getPrevious().gain(cards, "gain2");
+				for (var card of cards) {
+				player.getPrevious().chooseUseTarget(card, true, "nopopup");
+			}
+			}
+		}
+	},
+
 	// 技能A：主动技能，初始禁用，需要被其他技能激活
 	gz_daqiush_controlled_active: {
 	    enabledByDefault: false,  // 初始状态为禁用
@@ -204,9 +246,9 @@ export default {
 		},
 	},
 
-	// 技能D：被动技能，初始禁用，需要被其他技能激活
+	// 技能D：被动技能，初始启用，可以被其他技能禁用
 	gz_daqiush_controlled_passive: {
-	    enabledByDefault: false,  // 初始状态为禁用
+	    enabledByDefault: true,  // 初始状态为启用
 	    trigger: {player: "damageEnd"},
 	    // 保证AI不会使用此技能
 		check() {
@@ -257,10 +299,12 @@ export default {
 	// 玉魔：
 	miyanaga_teru_yumo: {
 	    enabledByDefault: true,  // 初始状态为启用
-		audio: 3,
+		audio: ["miyanaga_teru_assert1.mp3", "miyanaga_teru_yumo_assertion_succeeded1.mp3", "miyanaga_teru_yumo_assertion_failed1.mp3"],
 		group: ["miyanaga_teru_yumo_battlecry", "miyanaga_teru_yumo_assertion"],
 		subSkill:{
 			battlecry:{
+				skillAnimation: true,
+				animationColor: "thunder",
 				trigger: {player: "showCharacterEnd"},
 				forced: true,
 				filter(event, player) {
@@ -276,7 +320,7 @@ export default {
 				}
 			},
 			assertion:{
-				trigger: {global: "phaseBegin", player: "showCharacterEnd"},
+				trigger: {global: "phaseBegin"},
 				audio: ["miyanaga_teru_assert1.mp3"],
 				forced: true,
 				async content(event, trigger, player) {
@@ -311,13 +355,13 @@ export default {
 
 
 	// 月冷：
-	gz_miyanaga_teru_yueleng: {
-	    enabledByDefault: true,  // 初始状态为启用
-		audio: 3,
-		group: ["gz_miyanaga_teru_yueleng_assertion"],
+	miyanaga_teru_yueleng: {
+	    enabledByDefault: false,  // 初始状态为禁用
+		audio: ["miyanaga_teru_assert1.mp3", "miyanaga_teru_yueleng_assertion_succeeded1.mp3", "miyanaga_teru_yueleng_assertion_failed1.mp3"],
+		group: ["miyanaga_teru_yueleng_assertion"],
 		subSkill:{
 			assertion:{
-				trigger: {global: "phaseBegin", player: "showCharacterEnd"},
+				trigger: {global: "phaseBegin"},
 				audio: ["gz_miyanaga_teru_assert1.mp3"],
 				forced: true,
 				async content(event, trigger, player) {
@@ -325,22 +369,22 @@ export default {
 						// 回合开始时失能此技能
 						const parentName = event.name.slice(0, event.name.lastIndexOf("_"));
 						player.disableSkillBit(parentName);
-						player.addTempSkill("gz_miyanaga_teru_yueleng_assertion_succeeded", "phaseBefore");
-						player.addTempSkill("gz_miyanaga_teru_yueleng_assertion_failed", "phaseBefore");
+						player.addTempSkill("miyanaga_teru_yueleng_assertion_succeeded", "phaseBefore");
+						player.addTempSkill("miyanaga_teru_yueleng_assertion_failed", "phaseBefore");
 					}
 				},
 			},
 			assertion_succeeded:{
 				trigger: {global: "phaseEnd"},
-				audio: ["gz_miyanaga_teru_yueleng_assertion_succeeded1.mp3"],
+				audio: ["miyanaga_teru_yueleng_assertion_succeeded1.mp3"],
 				forced: true,
 				async content(event, trigger, player) {
-					// 成功：使能【月清】。从弃牌堆中获得此牌。
+					// 成功：使能【月清】。摸1张牌。
 				}
 			},
 			assertion_failed:{
 				trigger: {global: "phaseEnd"},
-				audio: ["gz_miyanaga_teru_yueleng_assertion_failed1.mp3"],
+				audio: ["miyanaga_teru_yueleng_assertion_failed1.mp3"],
 				forced: true,
 				async content(event, trigger, player) {
 					// 失败：使能【玉魔】。

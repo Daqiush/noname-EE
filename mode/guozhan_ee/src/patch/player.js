@@ -579,6 +579,8 @@ export class PlayerGuozhan extends Player {
 	/**
 	 * 判断是否为友方（基于势力集合交集）
 	 * 
+	 * 两个角色的势力集合存在交集时即为友方。
+	 * 
 	 * @param { Player } target 判断对象
 	 * @returns { boolean }
 	 */
@@ -598,24 +600,115 @@ export class PlayerGuozhan extends Player {
 			return false;
 		}
 		
-		// 野心家判断：每个野心家是独立的势力
-		if (this.isYe() || target.isYe()) {
-			// 使用势力集合交集判断（野心家的 identity 互相不同）
-			return this.hasCommonIdentity(target);
-		}
-		
 		// 使用势力集合交集判断
 		return this.hasCommonIdentity(target);
 	}
 
 	/**
-	 * 判断是否为敌方
+	 * 判断是否为明确友方（势力相同且双方均只有一个势力，或自己永远是自己的明确友方）
+	 * 
+	 * @param { Player } target 判断对象
+	 * @returns { boolean }
+	 */
+	isRealFriendOf(target) {
+		// 自己是自己的明确友方（当自己势力唯一时）
+		if (this === target) {
+			return true;
+		}
+		
+		// 野心家建国情况：需要两边都势力唯一
+		if (this.getStorage("yexinjia_friend").includes(target) || target.getStorage("yexinjia_friend").includes(this)) {
+			return true;
+		}
+		
+		// 任一方身份未确定
+		if (this.identity === "unknown" || target.identity === "unknown") {
+			return false;
+		}
+		
+		// 双方都必须只有一个势力，且势力相同
+		const myIdentities = this.getIdentities();
+		const targetIdentities = target.getIdentities();
+		
+		if (myIdentities.length !== 1 || targetIdentities.length !== 1) {
+			return false;
+		}
+		
+		return myIdentities[0] === targetIdentities[0];
+	}
+
+	/**
+	 * 判断是否为敌方（非对称函数）
+	 * 
+	 * 当且仅当 this 和 target 均有势力，且不满足"target 势力唯一，且 this 也有这个势力"。
+	 * 
+	 * 注意：这不是 isFriendOf 的非，甚至不是对称的！
+	 * 例如：魏蜀双势力对魏单势力 -> 只相同不不同（isFriendOf=true, isEnemyOf=false）
+	 *       魏单势力对魏蜀双势力 -> 既相同又不同（isFriendOf=true, isEnemyOf=true）
 	 * 
 	 * @param { Player } target 判断对象
 	 * @returns { boolean }
 	 */
 	isEnemyOf(target) {
-		return !this.isFriendOf(target);
+		// 自己不是自己的敌方
+		if (this === target) {
+			return false;
+		}
+		
+		// 任一方身份未确定，不构成敌方关系
+		if (this.identity === "unknown" || target.identity === "unknown") {
+			return false;
+		}
+		
+		const myIdentities = this.getIdentities();
+		const targetIdentities = target.getIdentities();
+		
+		// 任一方没有势力，不构成敌方关系
+		if (myIdentities.length === 0 || targetIdentities.length === 0) {
+			return false;
+		}
+		
+		// 判断条件："target 势力唯一，且 this 也有这个势力"
+		// 如果满足，则不是敌方；否则是敌方
+		if (targetIdentities.length === 1 && myIdentities.includes(targetIdentities[0])) {
+			return false;
+		}
+		
+		return true;
+	}
+
+	/**
+	 * 判断是否没有势力（两将均暗置）
+	 * 
+	 * @returns { boolean }
+	 */
+	isUnseen(num) {
+		switch (num) {
+			case 0:
+				return this.classList.contains("unseen");
+			case 1:
+				return this.classList.contains("unseen2");
+			case 2:
+				return this.classList.contains("unseen") || this.classList.contains("unseen2");
+			default:
+				return this.classList.contains("unseen") && (!this.name2 || this.classList.contains("unseen2"));
+		}
+	}
+
+	/**
+	 * 判断势力是否未确定（未确定势力或有多个势力）
+	 * 
+	 * @returns { boolean }
+	 */
+	isUndetermined() {
+		// 身份未确定
+		if (this.identity === "unknown") {
+			return true;
+		}
+		
+		// 有多个势力
+		const identities = this.getIdentities();
+		return identities.length !== 1;
 	}
 
 	/**
