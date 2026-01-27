@@ -605,7 +605,7 @@ export class PlayerGuozhan extends Player {
 	}
 
 	/**
-	 * 判断是否为明确友方（势力相同且双方均只有一个势力，或自己永远是自己的明确友方）
+	 * 判断是否为明确友方（势力相同且双方均只有一个势力）
 	 * 
 	 * @param { Player } target 判断对象
 	 * @returns { boolean }
@@ -613,12 +613,12 @@ export class PlayerGuozhan extends Player {
 	isRealFriendOf(target) {
 		// 自己是自己的明确友方（当自己势力唯一时）
 		if (this === target) {
-			return true;
+			return this.getIdentities().length === 1;
 		}
 		
 		// 野心家建国情况：需要两边都势力唯一
 		if (this.getStorage("yexinjia_friend").includes(target) || target.getStorage("yexinjia_friend").includes(this)) {
-			return true;
+			return this.getIdentities().length === 1 && target.getIdentities().length === 1;
 		}
 		
 		// 任一方身份未确定

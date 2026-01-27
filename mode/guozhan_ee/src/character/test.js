@@ -15,7 +15,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["gz_daqiush_controlled_active", "gz_daqiush_enable_active", "gz_daqiush_disable_active", "gz_daqiush_controlled_passive", "gz_daqiush_enable_passive", "gz_daqiush_disable_passive"],
+		skills: ["gz_daqiush_controlled_active", "gz_daqiush_enable_active", "gz_daqiush_disable_active", "gz_daqiush_controlled_passive1", "gz_daqiush_controlled_passive2", "gz_daqiush_enable_passive", "gz_daqiush_disable_passive"],
 		majorSecondGroup: "wei",
 	}),
 	gz_daqiush2: new Character({
@@ -234,7 +234,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["miyanaga_teru_yumo",
+		skills: ["miyanaga_teru_yueyong",
 			"miyanaga_teru_yueleng", "miyanaga_teru_yueqing", 
 			"miyanaga_teru_yueming", "miyanaga_teru_yuehui", 
 			"miyanaga_teru_yueqingg", "miyanaga_teru_yuelian", 

@@ -1,5 +1,6 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
 import { broadcastAll } from "./patch/game.js";
+import { gamePatch } from "./patch/index.js";
 
 /**
  * @type {ContentFuncByAll}
@@ -319,6 +320,11 @@ export const start = async (event, trigger, player) => {
 
 export const startBefore = () => {
 	const playback = localStorage.getItem(lib.configprefix + "playback");
+
+	// 覆盖 game.filterSkills，使其支持技能使能位检查
+	if (gamePatch.filterSkills) {
+		game.filterSkills = gamePatch.filterSkills;
+	}
 
 	// 修改 _showHiddenCharacter 技能的 filter，让它也排除 guozhan_ee 模式
 	// 因为原版只排除了 "guozhan"，而 guozhan_ee 模式也需要暗置武将
