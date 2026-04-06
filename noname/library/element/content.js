@@ -4175,7 +4175,7 @@ player.removeVirtualEquip(card);
 		if (hidden.includes(event.skill)) {
 			if (!info.silent && player.hasSkillTag("nomingzhi", false, null, true)) {
 				event.finish();
-			} else if ((!info.direct && typeof info.cost !== "function") || (get.is.locked(event.skill, player) && typeof info.cost == "function")) {
+			} else if (typeof info.cost !== "function" || (get.is.locked(event.skill, player) && typeof info.cost == "function")) {
 				event.trigger("triggerHidden");
 			} else {
 				event.skillHidden = true;

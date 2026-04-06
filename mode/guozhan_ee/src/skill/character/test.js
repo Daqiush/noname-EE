@@ -447,6 +447,7 @@ export default {
 				async content(event, trigger, player, result) {
 					if (trigger.name == "phase") {
 						"step 0";
+						console.log("月冷");
 						// 回合开始时失能此技能
 						const parentName = event.name.slice(0, event.name.lastIndexOf("_"));
 						player.disableSkillBit(parentName);

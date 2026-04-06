@@ -1,0 +1,245 @@
+{
+	"version": 1,
+	"lastUpdated": "2026-03-13",
+	"description": "character-code-generator 的持久化关键词映射库。用于保存技能自然语言关键词、参考技能键、参考文件与推荐代码写法之间的对应关系。",
+	"entryTemplateFile": "skills/character-code-generator/entry-template.json",
+	"usageRules": [
+		"开始生成技能前，先根据技能描述中的中文短语和行为动词检索本文件。",
+		"若命中已有条目，优先复用 referenceSkills 与 implementationHints，而不是重复全库搜索。",
+		"若未命中，则再去代码库搜索；搜索完成后，必须将新关键词、新参考技能键和实现提示回写到本文件。",
+		"新增条目时保持 patternId 稳定、关键词去重、文件路径使用仓库相对路径。",
+		"写入 *_info 时必须100%复制输入 description 原文，不得改写。"
+	],
+	"dedupeRules": [
+		"若 intent 相同或仅是同义改写，优先补充已有条目，不新建条目。",
+		"若 keywords 与 descriptionPatterns 只是已有模式的措辞变体，补充已有条目。",
+		"若 referenceSkills 的 skillId 与代码骨架未变化，不得创建新的 patternId。",
+		"只有在触发时机、资源成本、目标规则或结算流程发生结构性变化时，才允许新增条目。"
+	],
+	"entries": [
+		{
+			"patternId": "damage_after_draw_one",
+			"intent": "当角色受到伤害后摸一张牌",
+			"keywords": ["当你受到伤害后", "受到伤害后", "受伤后", "摸一张牌", "damageEnd", "draw"],
+			"descriptionPatterns": [
+				"当你受到伤害后，你可以摸一张牌。",
+				"当你受到伤害后，你可以摸一张牌并追加其他效果。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "gz_jianxiong",
+					"name": "奸雄",
+					"translationFile": "mode/guozhan/src/translate/skill/character/normal.js",
+					"skillFile": "mode/guozhan/src/skill/character/normal.js",
+					"note": "触发点是 player: damageEnd，可直接复用受伤后发动的整体结构。"
+				},
+				{
+					"skillId": "danxin",
+					"name": "殚心",
+					"translationFile": "character/yijiang/translate.js",
+					"skillFile": "character/yijiang/skill.js",
+					"note": "描述中明确包含“受到伤害后，你可以摸一张牌”，适合作为语义匹配样本。"
+				}
+			],
+			"implementationHints": [
+				"通常使用 trigger: { player: \"damageEnd\" }。",
+				"若效果只有摸牌，可直接在 content 中执行 player.draw()。",
+				"若描述含“你可以”，则优先考虑 direct、frequent、cost 这类可选发动结构。"
+			]
+		},
+		{
+			"patternId": "phase_use_discard_card_deal_one_damage",
+			"intent": "出牌阶段弃置一张牌并对目标造成1点伤害",
+			"keywords": ["出牌阶段", "弃置一张牌", "弃置一张手牌", "造成1点伤害", "phaseUse", "damage"],
+			"descriptionPatterns": [
+				"出牌阶段，你可以弃置一张手牌，然后对一名其他角色造成1点伤害。",
+				"出牌阶段限一次，你可以弃置一张牌并指定一名角色，你对其造成1点伤害。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "sanyao",
+					"name": "散谣",
+					"translationFile": "character/yijiang/translate.js",
+					"skillFile": "character/yijiang/skill.js",
+					"note": "标准的出牌阶段弃牌后造成1点伤害模板。"
+				},
+				{
+					"skillId": "gz_qiangxi",
+					"name": "强袭",
+					"translationFile": "mode/guozhan/src/translate/skill/character/normal.js",
+					"skillFile": "mode/guozhan/src/skill/character/normal.js",
+					"note": "同为出牌阶段主动伤害技，可参考 filterTarget、damage 与 AI 写法。"
+				}
+			],
+			"implementationHints": [
+				"通常使用 enable: \"phaseUse\"。",
+				"若要求弃置手牌，position 优先设为 \"h\"；若任意区域牌均可弃置，则用 \"he\"。",
+				"常见结构为 filter -> filterCard -> filterTarget -> content。",
+				"若文本写“其他角色”，filterTarget 必须排除自己。"
+			]
+		},
+		{
+			"patternId": "damage_after_judge_retaliate_or_discard",
+			"intent": "受到伤害后判定，未命中特定结果则令来源弃牌或受伤",
+			"keywords": ["受到伤害后", "判定", "伤害来源", "弃置两张手牌", "造成1点伤害", "judge"],
+			"descriptionPatterns": [
+				"当你受到伤害后，你可以判定。若结果不为红桃，则伤害来源须弃置两张手牌，否则受到来自你的1点伤害。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "ganglie",
+					"name": "刚烈",
+					"translationFile": "character/standard/translate.js",
+					"skillFile": "character/standard/skill.js",
+					"note": "与示例描述高度一致，是优先级最高的直接参考。"
+				}
+			],
+			"implementationHints": [
+				"优先复用 player.judge(...) + judge2 + source.chooseToDiscard(...) 的结构。",
+				"若判定条件是“不为红桃”，则 judge 函数里应将 heart 视为失败，其余视为成功。",
+				"触发前需要确认 event.source 存在且仍在场。"
+			]
+		},
+		{
+			"patternId": "draw_phase_take_other_handcards",
+			"intent": "摸牌阶段改为获得其他角色手牌",
+			"keywords": ["摸牌阶段", "改为", "获得", "其他角色", "各一张手牌", "phaseDrawBegin"],
+			"descriptionPatterns": [
+				"摸牌阶段，你可以改为获得至多两名其他角色的各一张手牌。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "tuxi",
+					"name": "突袭",
+					"translationFile": "character/standard/translate.js",
+					"skillFile": "character/standard/skill.js",
+					"note": "该模式的标准模板，直接覆盖“改为获得他人手牌”。"
+				}
+			],
+			"implementationHints": [
+				"通常挂在 phaseDrawBegin1 或 phaseDrawBegin2。",
+				"若是“改为”，常见写法是 trigger.changeToZero() 或直接调整 trigger.num。",
+				"多目标获得手牌可参考 chooseTarget + gainMultiple。"
+			]
+		},
+		{
+			"patternId": "draw_phase_less_draw_damage_plus_one",
+			"intent": "摸牌阶段少摸牌，回合内杀或决斗伤害+1",
+			"keywords": ["摸牌阶段", "少摸一张牌", "杀", "决斗", "造成伤害时", "伤害+1"],
+			"descriptionPatterns": [
+				"摸牌阶段，你可以少摸一张牌。若如此做，当你本回合内使用【杀】或【决斗】造成伤害时，此伤害+1。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "luoyi",
+					"name": "裸衣",
+					"translationFile": "character/standard/translate.js",
+					"skillFile": "character/standard/skill.js",
+					"note": "标准的“少摸牌 -> 回合内伤害加成”模板。"
+				}
+			],
+			"implementationHints": [
+				"主体技能通常在摸牌阶段修改 trigger.num。",
+				"额外加伤常拆为 sourceSkill 对应的子技能或配套技能，例如 luoyi2。",
+				"伤害加成过滤条件一般检查 event.card.name 为 sha 或 juedou。"
+			]
+		},
+		{
+			"patternId": "judge_end_gain_judge_card",
+			"intent": "判定牌生效后获得之",
+			"keywords": ["判定牌生效后", "你可以获得之", "judgeEnd", "gain judge card"],
+			"descriptionPatterns": [
+				"当你的判定牌生效后，你可以获得之。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "tiandu",
+					"name": "天妒",
+					"translationFile": "character/standard/translate.js",
+					"skillFile": "character/standard/skill.js",
+					"note": "判定结束后获得判定牌的标准模板。"
+				}
+			],
+			"implementationHints": [
+				"通常使用 trigger: { player: \"judgeEnd\" }。",
+				"需要过滤判定牌仍在外部区域，可参考 get.position(event.result.card, true) == \"o\"。",
+				"获得牌时常用 player.gain(trigger.result.card, \"gain2\")。"
+			]
+		},
+		{
+			"patternId": "damage_after_view_top_two_and_distribute",
+			"intent": "受到伤害后观看牌堆顶两张牌并分配给任意角色",
+			"keywords": ["受到1点伤害后", "观看牌堆顶的两张牌", "分配给任意角色", "交给任意角色"],
+			"descriptionPatterns": [
+				"当你受到1点伤害后，你可以观看牌堆顶的两张牌，然后将其分配给任意角色。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "yiji",
+					"name": "遗计",
+					"translationFile": "character/standard/translate.js",
+					"skillFile": "character/standard/skill.js",
+					"note": "该模式与描述完全对应，是首选样本。"
+				}
+			],
+			"implementationHints": [
+				"通常使用 trigger: { player: \"damageEnd\" } 并检查 event.num > 0。",
+				"可用 getIndex(event) 按伤害点数重复结算。",
+				"分配流程可参考 cardsGotoOrdering + chooseCardButton + chooseTarget。"
+			]
+		},
+		{
+			"patternId": "card_conversion_by_color_or_type",
+			"intent": "按颜色或牌张类型将手牌转化为另一张牌使用或打出",
+			"keywords": ["将一张黑色手牌转化", "将一张红色手牌转化", "将某牌转化为某另牌", "视为使用", "视为打出", "viewAs"],
+			"descriptionPatterns": [
+				"你可以将一张黑色手牌转化为【无懈可击】。",
+				"你可以将手牌区中的一张【杀】/【闪】转化为【杀/闪】。",
+				"当你需要使用一张【杀】/【无懈可击】时，你可以使用一张装备手牌，视为使用前者。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "kanpo",
+					"name": "看破",
+					"translationFile": "character/standard/translate.js",
+					"skillFile": "character/standard/skill.js",
+					"note": "黑色手牌转无懈的标准模板。"
+				},
+				{
+					"skillId": "longdan",
+					"name": "龙胆",
+					"translationFile": "character/standard/translate.js",
+					"skillFile": "character/standard/skill.js",
+					"note": "杀闪互转模板。"
+				}
+			],
+			"implementationHints": [
+				"常见写法是 enable: [\"chooseToUse\", \"chooseToRespond\"] + filterCard + viewAs。",
+				"若可在多种目标牌之间切换，可用 chooseButton.backup 动态生成 viewAs。",
+				"当备注定义“转化”等同于“当作使用或打出”时，应优先按 viewAs 机制实现。"
+			]
+		},
+		{
+			"patternId": "mingzhi_skill_with_first_show_trigger",
+			"intent": "明置技包含首次明置触发效果并附带锁定效果",
+			"keywords": ["明置技", "首次明置", "若不为你的回合", "视为装备", "锁定技"],
+			"descriptionPatterns": [
+				"明置技，若不为你的回合，获得前回合角色的一张牌。若你没有防具，视为装备【八卦阵】。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "bazhen",
+					"name": "八阵",
+					"translationFile": "character/standard/translate.js",
+					"skillFile": "character/standard/skill.js",
+					"note": "无防具视为八卦阵的锁定效果模板。"
+				}
+			],
+			"implementationHints": [
+				"按备注语义实现时，‘明置技’通常需要 showCharacterEnd + 首次明置标记。",
+				"首次明置触发可用 storage 标记防止重复触发。",
+				"锁定效果部分可通过 group 复用现有技能（如 bazhen）。"
+			]
+		}
+	]
+}

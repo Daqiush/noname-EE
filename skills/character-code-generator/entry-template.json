@@ -1,0 +1,27 @@
+{
+	"patternId": "replace_with_stable_snake_case_id",
+	"intent": "用一句中文概括该技能模式的核心意图",
+	"keywords": [
+		"填写技能描述中的稳定中文短语",
+		"填写行为关键词",
+		"填写常见事件名或机制词，如 damageEnd / judge / phaseUse"
+	],
+	"descriptionPatterns": [
+		"填写最接近原始技能描述的完整句子",
+		"若存在同模式变体，可补一到两条代表性描述"
+	],
+	"referenceSkills": [
+		{
+			"skillId": "填写参考技能字典键",
+			"name": "填写技能中文名",
+			"translationFile": "填写翻译文件的仓库相对路径",
+			"skillFile": "填写技能实现文件的仓库相对路径",
+			"note": "说明为什么选这个技能做模板，以及应复用哪部分结构"
+		}
+	],
+	"implementationHints": [
+		"说明常见 trigger / enable 写法",
+		"说明 filter、cost、content 的核心实现要点",
+		"说明该模式最容易写错的限制条件"
+	]
+}

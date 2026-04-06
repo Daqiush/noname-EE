@@ -1,0 +1,8 @@
+这个项目文件夹中有着许多的武将技能代码和它们对应的描述。例如，character\standard\skill.js的431-486行为“刚烈”技能的代码，character\standard\translate.js的43行为此技能的名称“刚烈”这一翻译，90行为此技能的描述。
+这个项目文件夹中还有一些武将的定义。例如，mode\guozhan_ee\src\character\test.js的231-243行有着国战模式武将宫永照的定义，285行有着其描述，mode\guozhan_ee\src\translate\character\test.js第30行有着“宫永照”这一名称的翻译，mode\guozhan_ee\src\translate\skill\character\test.js的32-49行则有着其各技能描述的翻译，mode\guozhan_ee\src\skill\character\test.js的301-476行则有其部分技能的实现代码，mode\guozhan_ee\src\voices\character\test.js的2-5行则有着其部分技能的台词。
+我的这个skill的功能应该是，当收到语义为“把位于xxx路径的武将代码化”的指令后，自动读取该路径下的一个TXT文件，获取目标武将的结构。然后将该武将的各部分分别加入到mode\guozhan_ee\src\character\vibe.js；mode\guozhan_ee\src\translate\character\vibe.js；mode\guozhan_ee\src\translate\skill\character\vibe.js；mode\guozhan_ee\src\skill\character\vibe.js；mode\guozhan_ee\src\voices\character\vibe.js
+具体过程：去项目的整个代码库中，先通过搜索技能的自然语言描述相应的关键词定位到相似的描述，阅读对应的描述，然后通过相同的字典键（例如“刚烈”技能的实现在character\standard\skill.js中的键和其描述在character\standard\translate.js中的键均为ganglie）定位到其实现代码，模仿对应的代码段。直至整个技能撰写完毕。
+需要注意的是，当一个关键字被查询过后，应当保存在 skills/character-code-generator/keyword-library.json 中，以免反复查询浪费token。
+如果武将描述文档中有“备注”解释了专有关键词含义，需要把“关键词->解释”持久化写入 skills/character-code-generator/keyword-glossary.json。后续再次遇到同关键词时，应自动识别并按该解释处理，不要求用户重复备注。
+若检索后判断现有武将技能代码模式根本不能适配新技能，必须先征求用户意见，再改写更底层代码并创建新的函数以支持实现。
+技能描述文本（*_info）必须100%复制输入文档中的description原文，不允许任何改写、润色、简化、同义替换；原文中的换行、HTML标记、标点与符号必须保留。

@@ -1,7 +1,9 @@
 import sort from "./sort.js";
-import shu from "./test.js";
+import test from "./test.js";
+import vibe from "./vibe.js";
 
 export default {
 	...sort,
-	...shu,
+	...test,
+	...vibe,
 };

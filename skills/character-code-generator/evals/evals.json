@@ -1,0 +1,58 @@
+{
+	"skill_name": "character-code-generator",
+	"evals": [
+		{
+			"id": 1,
+			"eval_name": "basic_character_conversion",
+			"prompt": "把位于D:/games/noname/test_gongyongzhao.txt的武将代码化",
+			"expected_output": "应该读取TXT文件，解析宫永照的基本信息，并在各个目标文件中生成对应的JavaScript代码",
+			"assertions": []
+		},
+		{
+			"id": 2,
+			"eval_name": "skill_translation_matching",
+			"prompt": "把位于D:/games/noname/test_simple_character.txt的武将代码化",
+			"expected_output": "应该能够搜索相似的技能描述，通过字典键找到对应的实现代码",
+			"assertions": []
+		},
+		{
+			"id": 3,
+			"eval_name": "keyword_caching_test",
+			"prompt": "将同一个武将代码化两次，第二次应该使用缓存的关键字",
+			"expected_output": "第二次处理时应该优先读取并复用 skills/character-code-generator/keyword-library.json 中已存在的条目，避免重复搜索已查询的关键字，提高效率",
+			"assertions": [
+				"存在 skills/character-code-generator/keyword-library.json 文件",
+				"文件中包含 keywords、referenceSkills、implementationHints 字段"
+			]
+		},
+		{
+			"id": 4,
+			"eval_name": "keyword_library_bootstrap",
+			"prompt": "检查并初始化 character-code-generator 的技能关键词库",
+			"expected_output": "应该发现并读取 skills/character-code-generator/keyword-library.json；若文件不存在则创建带有初始种子条目的关键词库。",
+			"assertions": []
+		},
+		{
+			"id": 5,
+			"eval_name": "note_keyword_learning_and_reuse",
+			"prompt": "输入文本中首次通过备注解释关键词A，后续文本只出现关键词A但无备注",
+			"expected_output": "应在首次处理时将关键词A解释写入 skills/character-code-generator/keyword-glossary.json，并在后续无备注时自动识别该关键词语义。",
+			"assertions": [
+				"存在 skills/character-code-generator/keyword-glossary.json 文件",
+				"文件中包含 terms 字段",
+				"后续任务会先读取 keyword-glossary.json"
+			]
+		},
+		{
+			"id": 6,
+			"eval_name": "description_exact_copy",
+			"prompt": "将带有换行和HTML标记的技能描述写入 *_info",
+			"expected_output": "*_info 与输入 description 文本逐字一致，保留所有换行、HTML标记与标点，不出现同义改写。",
+			"assertions": [
+				"*_info 字段与输入 description 完全一致",
+				"保留 \\n 换行",
+				"保留 HTML 标签"
+			]
+		}
+	]
+}

@@ -260,6 +260,7 @@ game.import("card", function () {
 				},
 				content() {
 					"step 0";
+					event.mode = event.card?.storage?.vibe_zgl_huoji_mode;
 					if (target.countCards("h") == 0) {
 						event.finish();
 						return;
@@ -284,18 +285,39 @@ game.import("card", function () {
 					game.log(target, "展示了", event.card2);
 					game.addCardKnower(result.cards, "everyone");
 					event._result = {};
-					player
-						.chooseToDiscard({ suit: get.suit(event.card2) }, function (card) {
+					const filterKey = event.mode == "花色->颜色" ? { color: get.color(event.card2) } : { suit: get.suit(event.card2) };
+					const promptText = event.mode == "弃置->展示" ? "请展示一张符合条件的手牌" : false;
+					const chooseEvent = event.mode == "弃置->展示"
+						? player.chooseCard("h", promptText, function (card) {
+								const evt = _status.event.getParent();
+								return (event.mode == "花色->颜色" ? get.color(card) : get.suit(card)) == (event.mode == "花色->颜色" ? get.color(evt.card2) : get.suit(evt.card2));
+							})
+						: player
+							.chooseToDiscard(filterKey, function (card) {
 							var evt = _status.event.getParent();
 							if (get.damageEffect(evt.target, evt.player, evt.player, "fire") > 0) {
 								return 6.2 + Math.min(4, evt.player.hp) - get.value(card, evt.player);
 							}
 							return -1;
-						})
-						.set("prompt", false);
+							})
+							.set("prompt", false);
+					if (event.mode == "弃置->展示") {
+						chooseEvent.set("ai", function (card) {
+							var evt = _status.event.getParent();
+							if (get.damageEffect(evt.target, evt.player, evt.player, "fire") > 0) {
+								return 6.2 + Math.min(4, evt.player.hp) - get.value(card, evt.player);
+							}
+							return -1;
+						});
+					}
 					game.delay(2);
 					"step 2";
 					if (result.bool) {
+						if (event.mode == "弃置->展示") {
+							player.showCards(result.cards, "火攻：展示代替弃置");
+						} else {
+							player.discard(result.cards);
+						}
 						target.damage("fire");
 					} else {
 						target.addTempSkill("huogong2");

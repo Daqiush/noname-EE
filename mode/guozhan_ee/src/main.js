@@ -326,6 +326,33 @@ export const startBefore = () => {
 		game.filterSkills = gamePatch.filterSkills;
 	}
 
+	// 覆盖 lib.filter.filterTrigger，阻止被禁用技能的 group 技能触发
+	// 原因：addSkillTrigger 时 expandSkills 会将 group 技能注册到 lib.hook，
+	// 此后即使 filterSkills 过滤掉了父技能，group 技能仍在 lib.hook 中被收集。
+	// 此处作为最终防线，仅阻止「位于已禁用父技能 group 数组中」的技能触发，
+	// 不影响中途通过 addTempSkills 等方式独立获得的衍生技能。
+	const _originalFilterTrigger = lib.filter.filterTrigger;
+	lib.filter.filterTrigger = function(event, player, triggername, skill, indexedData) {
+		if (typeof player.isSkillEnabled === 'function') {
+			// 检查技能自身的使能位
+			if (!player.isSkillEnabled(skill)) {
+				return false;
+			}
+			// 检查该技能是否位于某个已禁用父技能的 group 中
+			const info = lib.skill[skill];
+			if (info && info.sourceSkill && info.sourceSkill !== skill) {
+				const parentInfo = lib.skill[info.sourceSkill];
+				if (parentInfo && parentInfo.group) {
+					const groupList = Array.isArray(parentInfo.group) ? parentInfo.group : [parentInfo.group];
+					if (groupList.includes(skill) && !player.isSkillEnabled(info.sourceSkill)) {
+						return false;
+					}
+				}
+			}
+		}
+		return _originalFilterTrigger.call(this, event, player, triggername, skill, indexedData);
+	};
+
 	// 修改 _showHiddenCharacter 技能的 filter，让它也排除 guozhan_ee 模式
 	// 因为原版只排除了 "guozhan"，而 guozhan_ee 模式也需要暗置武将
 	if (lib.skill._showHiddenCharacter) {

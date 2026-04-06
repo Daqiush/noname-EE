@@ -5063,7 +5063,7 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 						forbidstr += get.skillInfoTranslation(skills[i], node, false) + "</div></div>";
 						uiintro.add(forbidstr);
 					} else if (!skills2.includes(skills[i])) {
-						if (lib.skill[skills[i]].preHidden && get.mode() == "guozhan") {
+						if (lib.skill[skills[i]].preHidden && (get.mode() == "guozhan" || get.mode() == "guozhan_ee")) {
 							uiintro.add('<div><div class="skill" style="opacity:0.5">' + translation + '</div><div><span style="opacity:0.5">' + get.skillInfoTranslation(skills[i], node, false) + '</span><br><div class="underlinenode on gray" style="position:relative;padding-left:0;padding-top:7px">预亮技能</div></div></div>');
 							var underlinenode = uiintro.content.lastChild.querySelector(".underlinenode");
 							if (_status.prehidden_skills.includes(skills[i])) {

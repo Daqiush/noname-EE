@@ -1,6 +1,7 @@
 import { Character } from "../../../../noname/library/element/index.js";
 
 import test from "./test.js";
+import vibe from "./vibe.js";
 
 /** @type {Record<string, Character>} */
 export const pack = {
@@ -271,6 +272,7 @@ export const pack = {
 	}),
 
 	...test,
+	...vibe,
 };
 
 export { default as intro } from "./intro.js";
