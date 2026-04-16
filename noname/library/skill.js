@@ -1303,7 +1303,7 @@ export default {
 		popup: false,
 		priority: 25,
 		filter: function (event, player, name) {
-			return player.isUnseen(2) && get.mode() != "guozhan";
+			return player.isUnseen(2) && get.mode() != "guozhan" && get.mode() != "guozhan_ee";
 		},
 		content: function () {
 			player.showCharacter(2);
@@ -1347,7 +1347,7 @@ export default {
 		priority: 25,
 		charlotte: true,
 		filter: function (event, player) {
-			return get.mode() != "guozhan" && get.is.double(player.name1) && !player._groupChosen;
+			return get.mode() != "guozhan" && get.mode() != "guozhan_ee" && get.is.double(player.name1) && !player._groupChosen;
 		},
 		content: function () {
 			"step 0";
@@ -1541,7 +1541,7 @@ export default {
 						}
 					}
 					var cfg = player.storage.dualside;
-					if (get.mode() == "guozhan") {
+					if (get.mode() == "guozhan" || get.mode() == "guozhan_ee") {
 						if (player.name1 == cfg[0]) {
 							player.showCharacter(0);
 						} else {

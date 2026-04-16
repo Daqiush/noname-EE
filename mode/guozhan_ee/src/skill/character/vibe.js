@@ -1,4 +1,4 @@
-import { lib, game, ui, get as _get, ai, _status } from "../../../../../noname.js";
+import { lib, game, ui, get as _get, ai, _status}  from "../../../../../noname.js";
 import { cast } from "../../../../../noname/util/index.js";
 import { GetGuozhan } from "../../patch/get.js";
 import { PlayerGuozhan } from "../../patch/player.js";
@@ -12,85 +12,365 @@ export default {
 	// 诸葛亮：类火攻结算，可选择修改规则
 	vibe_zgl_huoji: {
 		audio: 2,
-		enable: "phaseUse",
-		usable: 1,
+		onremove(player, skill) {
+			if (player.storage?.vibe_zgl_huoji_record) {
+				console.log("[vibe_zgl_huoji] clear record on remove", player.playerid, Object.keys(player.storage.vibe_zgl_huoji_record));
+				delete player.storage.vibe_zgl_huoji_record;
+			}
+		},
+		trigger: { player: "useCard" },
+		direct: true,
+		locked: false,
+		popup: false,
 		filter(event, player) {
-			return player.countCards("h", card => get.color(card) == "red") > 0;
+			return event.card?.name == "huogong";
 		},
-		filterCard(card) {
-			return get.color(card) == "red";
+		content() {
+			"step 0";
+			player
+				.chooseControl("弃置->展示", "花色->颜色", "其->其与其同一队列的其他角色", "cancel2")
+				.set("prompt", "火计：请选择本次修改项")
+				.set("ai", () => "花色->颜色");
+			"step 1";
+			if (!result.control || result.control == "cancel2") {
+				event.finish();
+				return;
+			}
+			event.mode = result.control;
+			var id = trigger.card.cardid;
+			trigger.card.storage = trigger.card.storage || {};
+			if (!id) {
+				if (!trigger.card.storage.vibe_zgl_huoji_record_id) {
+					trigger.card.storage.vibe_zgl_huoji_record_id = lib.status.videoId++;
+				}
+				id = trigger.card.storage.vibe_zgl_huoji_record_id;
+			} else {
+				trigger.card.storage.vibe_zgl_huoji_record_id = id;
+			}
+			if (!player.storage.vibe_zgl_huoji_record) {
+				player.storage.vibe_zgl_huoji_record = {};
+			}
+			player.storage.vibe_zgl_huoji_record[id] = event.mode;
+			console.log("[vibe_zgl_huoji] record", player.playerid, id, event.mode);
 		},
-		position: "h",
-		viewAs: { name: "huogong", isCard: true },
-		viewAsFilter(player) {
-			return player.countCards("h", card => get.color(card) == "red") > 0;
+		huogongContentShow() {
+			"step 0";
+			if (target.countCards("h") == 0) {
+				event.finish();
+				return;
+			}
+			if (target.countCards("h") == 1) {
+				event._result = { cards: target.getCards("h") };
+			} else {
+				target.chooseCard(true).ai = function (card) {
+					if (_status.event.getRand() < 0.5) {
+						return Math.random();
+					}
+					return get.value(card);
+				};
+			}
+			"step 1";
+			target.showCards(result.cards).setContent(function () {});
+			event.dialog = ui.create.dialog(get.translation(target) + "展示的手牌", result.cards);
+			event.videoId = lib.status.videoId++;
+			game.broadcast("createDialog", event.videoId, get.translation(target) + "展示的手牌", result.cards);
+			game.addVideo("cardDialog", null, [get.translation(target) + "展示的手牌", get.cardsInfo(result.cards), event.videoId]);
+			event.card2 = result.cards[0];
+			game.log(target, "展示了", event.card2);
+			game.addCardKnower(result.cards, "everyone");
+
+			event._result = {};
+			player
+				.chooseCard("h", "请展示一张与展示牌花色相同的手牌", function (card) {
+					return get.suit(card) == get.suit(_status.event.getParent().card2);
+				})
+				.set("ai", function (card) {
+					var evt = _status.event.getParent();
+					if (get.damageEffect(evt.target, evt.player, evt.player, "fire") > 0) {
+						return 6.2 + Math.min(4, evt.player.hp) - get.value(card, evt.player);
+					}
+					return -1;
+				});
+			game.delay(2);
+			"step 2";
+			if (result.bool) {
+				player.showCards(result.cards, "火计：展示代替弃置");
+				target.damage("fire");
+			} else {
+				target.addTempSkill("huogong2");
+			}
+			event.dialog.close();
+			game.addVideo("cardDialog", null, event.videoId);
+			game.broadcast("closeDialog", event.videoId);
 		},
-		check(card) {
-			return 6 - get.value(card);
+		huogongContentQueueSplash() {
+			"step 0";
+			if (target.countCards("h") == 0) {
+				event.finish();
+				return;
+			}
+			if (target.countCards("h") == 1) {
+				event._result = { cards: target.getCards("h") };
+			} else {
+				target.chooseCard(true).ai = function (card) {
+					if (_status.event.getRand() < 0.5) {
+						return Math.random();
+					}
+					return get.value(card);
+				};
+			}
+			"step 1";
+			target.showCards(result.cards).setContent(function () {});
+			event.dialog = ui.create.dialog(get.translation(target) + "展示的手牌", result.cards);
+			event.videoId = lib.status.videoId++;
+			game.broadcast("createDialog", event.videoId, get.translation(target) + "展示的手牌", result.cards);
+			game.addVideo("cardDialog", null, [get.translation(target) + "展示的手牌", get.cardsInfo(result.cards), event.videoId]);
+			event.card2 = result.cards[0];
+			game.log(target, "展示了", event.card2);
+			game.addCardKnower(result.cards, "everyone");
+
+			event._result = {};
+			player
+				.chooseToDiscard({ suit: get.suit(event.card2) }, function (card) {
+					var evt = _status.event.getParent();
+					if (get.damageEffect(evt.target, evt.player, evt.player, "fire") > 0) {
+						return 6.2 + Math.min(4, evt.player.hp) - get.value(card, evt.player);
+					}
+					return -1;
+				})
+				.set("prompt", false);
+			game.delay(2);
+			"step 2";
+			if (result.bool) {
+				target.damage("fire");
+				var extraTargets = game.filterPlayer(current => {
+					if (current == player || current == target) {
+						return false;
+					}
+					return typeof target.inline == "function" ? target.inline(current) : false;
+				});
+				if (extraTargets.length) {
+					player.line(extraTargets, "fire");
+					for (var i = 0; i < extraTargets.length; i++) {
+						extraTargets[i].damage("fire");
+					}
+				}
+			} else {
+				target.addTempSkill("huogong2");
+			}
+			event.dialog.close();
+			game.addVideo("cardDialog", null, event.videoId);
+			game.broadcast("closeDialog", event.videoId);
 		},
-		prompt: "将一张红色手牌当【火攻】使用",
-        group: ["vibe_zgl_huoji_effect"],
+		huogongContentColor() {
+			"step 0";
+			if (target.countCards("h") == 0) {
+				event.finish();
+				return;
+			}
+			if (target.countCards("h") == 1) {
+				event._result = { cards: target.getCards("h") };
+			} else {
+				target.chooseCard(true).ai = function (card) {
+					if (_status.event.getRand() < 0.5) {
+						return Math.random();
+					}
+					return get.value(card);
+				};
+			}
+			"step 1";
+			target.showCards(result.cards).setContent(function () {});
+			event.dialog = ui.create.dialog(get.translation(target) + "展示的手牌", result.cards);
+			event.videoId = lib.status.videoId++;
+			game.broadcast("createDialog", event.videoId, get.translation(target) + "展示的手牌", result.cards);
+			game.addVideo("cardDialog", null, [get.translation(target) + "展示的手牌", get.cardsInfo(result.cards), event.videoId]);
+			event.card2 = result.cards[0];
+			game.log(target, "展示了", event.card2);
+			game.addCardKnower(result.cards, "everyone");
+
+			event._result = {};
+			player
+				.chooseToDiscard({ color: get.color(event.card2) }, function (card) {
+					var evt = _status.event.getParent();
+					if (get.damageEffect(evt.target, evt.player, evt.player, "fire") > 0) {
+						return 6.2 + Math.min(4, evt.player.hp) - get.value(card, evt.player);
+					}
+					return -1;
+				})
+				.set("prompt", false);
+			game.delay(2);
+			"step 2";
+			if (result.bool) {
+				target.damage("fire");
+			} else {
+				target.addTempSkill("huogong2");
+			}
+			event.dialog.close();
+			game.addVideo("cardDialog", null, event.videoId);
+			game.broadcast("closeDialog", event.videoId);
+		},
+		getHuojiContentByCard(card, player) {
+			if (card?.name != "huogong") {
+				return null;
+			}
+			var id = card.cardid || card.storage?.vibe_zgl_huoji_record_id;
+			var map = player.storage.vibe_zgl_huoji_record || {};
+			var mode = map[id];
+			console.log("[vibe_zgl_huoji] lookup", player.playerid, id, mode);
+			var contentMap = {
+				"弃置->展示": lib.skill.vibe_zgl_huoji.huogongContentShow,
+				"花色->颜色": lib.skill.vibe_zgl_huoji.huogongContentColor,
+				"其->其与其同一队列的其他角色": lib.skill.vibe_zgl_huoji.huogongContentQueueSplash,
+			};
+			return contentMap[mode] || null;
+		},
+		group: ["vibe_zgl_huoji_viewAs", "vibe_zgl_huoji_effect", "vibe_zgl_huoji_dieClear"],
 		subSkill: {
 			effect: {
-				trigger: { player: "useCardBefore" },
-				charlotte: true,
-				direct: true,
+				trigger: { global: "huogongBegin" },
+				forced: true,
+				locked: false,
+				popup: false,
 				filter(event, player) {
-					return event.card?.name == "huogong";
+					return !!lib.skill.vibe_zgl_huoji.getHuojiContentByCard(event.card, player);
 				},
 				content() {
-					"step 0";
-					player
-						.chooseControl("弃置->展示", "花色->颜色", "其->其与其同一队列的其他角色", "cancel2")
-						.set("prompt", "火计：请选择本次修改项")
-						.set("ai", () => "花色->颜色");
-					"step 1";
-					if (result.control && result.control != "cancel2") {
-						if (!trigger.card.storage) {
-							trigger.card.storage = {};
-						}
-						trigger.card.storage.vibe_zgl_huoji_mode = result.control;
-						if (result.control == "其->其与其同一队列的其他角色" && trigger.targets && trigger.targets.length) {
-							const firstTarget = trigger.targets[0];
-							const extraTargets = game.filterPlayer(current => {
-								if (current == player || current == firstTarget) {
-									return false;
-								}
-								return typeof firstTarget.inline == "function" ? firstTarget.inline(current) : false;
-							});
-							trigger.targets.addArray(extraTargets);
-						}
+					var content = lib.skill.vibe_zgl_huoji.getHuojiContentByCard(trigger.card, player);
+					if (content) {
+						trigger.setContent(content);
 					}
 				},
 			},
-		},
-		ai: {
-			order: 7,
-			result: {
-				target: -1,
+			dieClear: {
+				trigger: { player: "dieBegin" },
+				silent: true,
+				content() {
+					if (player.storage?.vibe_zgl_huoji_record) {
+						console.log("[vibe_zgl_huoji] clear record on die", player.playerid, Object.keys(player.storage.vibe_zgl_huoji_record));
+						delete player.storage.vibe_zgl_huoji_record;
+					}
+				},
+			},
+			viewAs: {
+				audio: 2,
+				enable: "phaseUse",
+				usable: 1,
+				filter(event, player) {
+					return player.countCards("h", card => get.color(card) == "red") > 0;
+				},
+				filterCard(card) {
+					return get.color(card) == "red";
+				},
+				position: "h",
+				viewAs: { name: "huogong", isCard: true },
+				viewAsFilter(player) {
+					return player.countCards("h", card => get.color(card) == "red") > 0;
+				},
+				check(card) {
+					return 6 - get.value(card);
+				},
+				prompt: "将一张红色手牌当【火攻】使用",
+				ai: {
+					order: 7,
+					result: {
+						target: -1,
+					},
+				},
 			},
 		},
 	},
 
 	vibe_zgl_kanpo: {
-		audio: 2,
-		enable: ["chooseToUse", "chooseToRespond"],
-		filterCard(card) {
-			return get.color(card) == "black";
+			audio: 2,
+			enable: ["chooseToUse", "chooseToRespond"],
+			filterCard(card) {
+				return get.color(card) == "black";
+			},
+			position: "h",
+			viewAs: { name: "wuxie" },
+			viewAsFilter(player) {
+				return player.countCards("h", card => get.color(card) == "black") > 0;
+			},
+			prompt: "将一张黑色手牌当【无懈可击】使用或打出",
+			check(card) {
+				return 8 - get.value(card);
+			},
 		},
-		position: "h",
-		viewAs: { name: "wuxie" },
-		viewAsFilter(player) {
-			return player.countCards("h", card => get.color(card) == "black") > 0;
-		},
-		prompt: "将一张黑色手牌当【无懈可击】使用或打出",
-		check(card) {
-			return 8 - get.value(card);
-		},
-	},
 
 	vibe_zgl_bazhen: {
-		group: ["bazhen", "vibe_zgl_bazhen_gain"],
+		inherit: "bazhen",
+		group: ["bazhen_bagua", "vibe_zgl_bazhen_gain", "vibe_zgl_bazhen_hidden_bagua", "vibe_zgl_bazhen_forced_bagua"],
+		subSkill: {
+			hidden_bagua: {
+				priority: 10,
+				trigger: { player: ["chooseToRespondBegin", "chooseToUseBegin"] },
+				direct: true,
+				popup: false,
+				filter(event, player) {
+					// 必须满足八卦阵的基础触发条件（需要闪、未响应、防具未失效等）
+					if (!lib.skill.bagua_skill.filter(event, player)) {
+						return false;
+					}
+					// 需要“无防具且防具栏可用”
+					if (!player.hasEmptySlot(2)) {
+						return false;
+					}
+					// 仅在该技能武将牌仍暗置时可发动
+					const effectiveMainHidden = player.isUnseen(0) && get.character(player.name1, 3).includes("vibe_zgl_bazhen");
+					const effectiveViceHidden = player.name2 && player.isUnseen(1) && get.character(player.name2, 3).includes("vibe_zgl_bazhen");
+					return effectiveMainHidden || effectiveViceHidden;
+				},
+				content() {
+					// 注意：暗将技能触发时，是否明置由引擎的“明置武将以发动技能”流程处理。
+					// 到这里时若能进入 content，说明已完成明置确认，不应再二次找暗将位或手动 showCharacter。
+					player.addTempSkill("vibe_zgl_bazhen_force_mark", {
+						player: ["chooseToRespondAfter", "chooseToUseAfter"],
+					});
+				},
+			},
+			forced_bagua: {
+				trigger: { player: ["chooseToRespondBegin", "chooseToUseBegin"] },
+				forced: true,
+				popup: false,
+				filter(event, player) {
+					if (!lib.skill.bagua_skill.filter(event, player)) {
+						console.log("[vibe_zgl_bazhen] bagua filter not passed", player.playerid);
+						return false;
+					}
+					if (!player.hasSkill("vibe_zgl_bazhen_force_mark")) {
+						console.log("[vibe_zgl_bazhen] no force mark", player.playerid);
+						return false;
+					}
+					if (!player.hasEmptySlot(2)) {
+						console.log("[vibe_zgl_bazhen] no empty slot", player.playerid);
+						return false;
+					}
+					return true;
+				},
+				content() {
+					console.log("[vibe_zgl_bazhen] force bagua trigger", player.playerid);
+					"step 0";
+					// 标记为已执行八卦，阻止本次后续的 bazhen_bagua 再弹可选发动
+					trigger.bagua_skill = true;
+					player.judge("bagua", function (card) {
+						return get.color(card) === "red" ? 1.5 : -0.5;
+					}).judge2 = function (result) {
+						return result.bool;
+					};
+					"step 1";
+					if (result.judge > 0) {
+						trigger.untrigger();
+						trigger.set("responded", true);
+						trigger.result = { bool: true, card: { name: "shan", isCard: true } };
+					}
+					player.removeSkill("vibe_zgl_bazhen_force_mark");
+				},
+			},
+			force_mark: {
+				charlotte: true,
+				sub: true,
+			},
+		},
 	},
 	vibe_zgl_bazhen_gain: {
 		trigger: { player: "showCharacterEnd" },
@@ -129,21 +409,21 @@ export default {
 		group: ["vibe_zhaoyun_yajiao_use", "vibe_zhaoyun_yajiao_respond"],
 		subSkill: {
         use: {
-            trigger: { player: "useCardAfter" },
+			trigger: { player: "useCard" },
             direct: true,
             filter(event, player) {
-                return ["sha", "shan"].includes(event.card?.name) && !player.hasSkill("vibe_zhaoyun_yajiao_used_mark");
+				return ["sha", "shan"].includes(event.card?.name) && !player.hasSkill("vibe_zhaoyun_yajiao_used_mark");
             },
             content() {
-                player.addTempSkill("vibe_zhaoyun_yajiao_used_mark", "roundStart");
+				player.addTempSkill("vibe_zhaoyun_yajiao_used_mark", { global: "phaseAfter" });
                 player.draw();
             },
         },
         respond: {
-            trigger: { player: "respondAfter" },
+			trigger: { player: "respond" },
             filter(event, player) {
-                return ["sha", "shan"].includes(event.card?.name) &&
-                    !player.hasSkill("vibe_zhaoyun_yajiao_respond_mark") &&
+				return ["sha", "shan"].includes(event.card?.name) &&
+					!player.hasSkill("vibe_zhaoyun_yajiao_respond_mark") &&
                     _status.currentPhase &&
                     _status.currentPhase != player &&
                     _status.currentPhase.isIn() &&
@@ -151,7 +431,7 @@ export default {
             },
             content() {
                 "step 0";
-                player.addTempSkill("vibe_zhaoyun_yajiao_respond_mark", "roundStart");
+				player.addTempSkill("vibe_zhaoyun_yajiao_respond_mark", { global: "phaseAfter" });
                 player.choosePlayerCard(_status.currentPhase, "h", true, "涯角：获得当前回合角色一张手牌");
                 "step 1";
                 if (result.bool && result.cards && result.cards.length) {
@@ -179,7 +459,7 @@ export default {
 		},
 		content() {
 			"step 0";
-			target.showHandcards();
+			target.viewHandcards(player);
 			player.chooseControl("手牌干预", "暗将观察").set("prompt", "尚义：选择一项");
 			"step 1";
 			event.choice = result.control;
@@ -188,7 +468,7 @@ export default {
 					event.finish();
 					return;
 				}
-				player.choosePlayerCard(target, "h", true, "尚义：选择其一张手牌（黑弃置/红重铸）");
+				player.chooseButton(1, [get.translation(target.name) + "的手牌", target.getCards("h")]).set("prompt", "尚义：选择其一张手牌（黑弃置/红重铸）");
 			} else {
 				var hidden = [];
 				if (target.isUnseen(0)) {
@@ -204,8 +484,8 @@ export default {
 				event.finish();
 			}
 			"step 2";
-			if (result.bool && result.cards && result.cards.length) {
-				var card = result.cards[0];
+			if (result.buttons && result.buttons.length) {
+				var card = result.buttons[0].link;
 				if (get.color(card) == "black") {
 					target.discard(card);
 				} else {
@@ -227,61 +507,143 @@ export default {
 
 	vibe_jiangqin_jianyi: {
 		audio: 2,
-		enable: ["chooseToUse", "chooseToRespond"],
+		enable: "chooseToUse",
+		position: "h",
+		filter(event, player) {
+			if (!player.countCards("h", card => get.type(card) == "equip" && player.hasUseTarget(card))) {
+				return false;
+			}
+			for (var name of ["sha", "wuxie"]) {
+				if (event.filterCard({ name: name, isCard: true }, player, event)) {
+					return true;
+				}
+			}
+			return false;
+		},
+		hiddenCard(player, name) {
+			if (!["sha", "wuxie"].includes(name)) {
+				return false;
+			}
+			return (
+				player.countCards("h", card => {
+					if (get.type(card) != "equip") {
+						return false;
+					}
+					return player.hasUseTarget(card);
+				}) > 0
+			);
+		},
+		viewAsFilter(player) {
+			return (
+				player.countCards("h", card => {
+					if (get.type(card) != "equip") {
+						return false;
+					}
+					return player.hasUseTarget(card);
+				}) > 0
+			);
+		},
 		chooseButton: {
-			dialog() {
-				return ui.create.dialog("俭衣：请选择转化牌", [["sha", "wuxie"], "vcard"]);
+			dialog(event, player) {
+				const list = [
+					["", "", "sha"],
+					["", "", "wuxie"],
+				];
+				return ui.create.dialog("俭衣", [list, "vcard"]);
 			},
 			filter(button, player) {
-				var evt = _status.event.getParent();
-				if (button.link[2] == "sha") {
-					return evt.filterCard({ name: "sha" }, player, evt);
+				const evt = _status.event.getParent();
+				if (!evt || evt.name != "chooseToUse") {
+					return false;
 				}
-				return evt.filterCard({ name: "wuxie" }, player, evt);
+				return evt.filterCard({ name: button.link[2], isCard: true }, player, evt);
 			},
 			check(button) {
-				if (button.link[2] == "wuxie") {
-					return 10;
-				}
-				return 7;
+				const choice = button.link[2];
+				return choice == "sha" ? 1 : 0.5;
 			},
 			backup(links, player) {
+				const choice = links[0][2];
 				return {
-					filterCard(card) {
-						return get.type(card) == "equip";
+					filterCard() {
+						return false;
 					},
+					selectCard: -1,
 					position: "h",
-					viewAs: { name: links[0][2] },
+					viewAs: { name: choice },
 					precontent() {
 						"step 0";
-						if (event.result.card && event.result.card.name == "sha") {
-							player.chooseControl("不计入次数", "不可被抵消", "cancel2").set("prompt", "俭衣：为此【杀】选择增益");
-						} else {
-							event.finish();
-						}
+						event.virtualCard = event.result.card;
+						event.virtualCard.storage = event.virtualCard.storage || {};
+						player
+							.chooseCard("h", "俭衣：选择并使用一张装备手牌", card => {
+								if (get.type(card) != "equip") {
+									return false;
+								}
+								return player.hasUseTarget(card);
+							})
+							.set("ai", card => 8 - get.value(card));
 						"step 1";
-						if (result.control == "不计入次数") {
-							event.getParent().addCount = false;
-						} else if (result.control == "不可被抵消") {
-							event.result.card.storage.vibe_jianyi_direct = true;
+						if (!result.bool || !result.cards || !result.cards.length) {
+							event.result = { bool: false };
+							event.finish();
+							return;
+						}
+						const equipCard = result.cards[0];
+						const subtype = get.subtype(equipCard);
+						event.replaced = !!(subtype && player.getEquip(subtype));
+						event.equipCard = equipCard;
+						player.chooseUseTarget(equipCard, true, "nopopup");
+						"step 2";
+						if (!result.bool) {
+							event.result = { bool: false };
+							event.finish();
+							return;
+						}
+						if (!event.replaced) {
+							event.finish();
+							return;
+						}
+						player
+							.chooseControl("不能被抵消", "不计入次数")
+							.set("prompt", "俭衣：选择额外效果")
+							.set("ai", () => "不能被抵消");
+						"step 3";
+						if (result.control == "不能被抵消") {
+							event.virtualCard.storage.vibe_jianyi_nowuxie = true;
+						} else if (result.control == "不计入次数") {
+							event.virtualCard.storage.vibe_jianyi_nocount = true;
 						}
 					},
 				};
 			},
-			prompt(links, player) {
-				return "将一张装备手牌当" + get.translation(links[0][2]) + "使用或打出";
-			},
 		},
-		group: ["vibe_jiangqin_jianyi_direct_hit"],
+		group: ["vibe_jiangqin_jianyi_effect"],
 		subSkill: {
-			direct_hit: {
-				trigger: { player: "useCardToPlayered" },
+			effect: {
+				trigger: { player: "useCard1" },
 				forced: true,
 				filter(event, player) {
-					return event.card?.storage?.vibe_jianyi_direct;
+					return event.card?.storage?.vibe_jianyi_nowuxie || event.card?.storage?.vibe_jianyi_nocount;
 				},
 				content() {
-					trigger.directHit.add(trigger.target);
+					if (trigger.card.storage.vibe_jianyi_nowuxie) {
+						trigger.nowuxie = true;
+						if (trigger.card.name == "sha") {
+							trigger.customArgs = trigger.customArgs || {};
+							trigger.customArgs.default = trigger.customArgs.default || {};
+							trigger.customArgs.default.directHit2 = true;
+						}
+					}
+					if (trigger.card.storage.vibe_jianyi_nocount) {
+						if (trigger.addCount !== false) {
+							trigger.addCount = false;
+						}
+						const evt = trigger.getParent();
+						if (evt && evt.addCount !== false) {
+							evt.addCount = false;
+						}
+					}
 				},
 			},
 		},
@@ -314,7 +676,7 @@ export default {
 			if (event.card?.name != "tao") {
 				return false;
 			}
-			if (event.player == player || !event.player.isFriendOf(player)) {
+			if (!event.player.isFriendOf(player)) {
 				return false;
 			}
 			if (_status.currentPhase != event.player) {
@@ -324,7 +686,7 @@ export default {
 		},
 		content() {
 			"step 0";
-			player
+			trigger.player
 				.chooseTarget([1, Infinity], "慈诫：为此【桃】额外指定任意名已受伤角色", function (card, player, target) {
 					return target.isDamaged() && !trigger.targets.includes(target);
 				})
@@ -351,7 +713,11 @@ export default {
 			if (!event.player || !event.player.isFriendOf(player)) {
 				return false;
 			}
-			if (event.player != event.getParent()?.player) {
+			if (event.type != "discard") {
+				return false;
+			}
+			// 只在“其自己弃置自己的牌”时触发；被他人弃置不触发
+			if ((event.discarder || event.getParent(2)?.player) != event.player) {
 				return false;
 			}
 			var cards = (event.cards2 || []).filter(card => get.position(card, true) == "d");
@@ -359,7 +725,7 @@ export default {
 		},
 		content() {
 			"step 0";
-			player.addTempSkill("vibe_bianfuren_yuejian_used", "roundStart");
+			player.addTempSkill("vibe_bianfuren_yuejian_used", { global: "phaseAfter" });
 			event.cards = (trigger.cards2 || []).filter(card => get.position(card, true) == "d");
 			trigger.player.chooseButton(["约俭：选择一张弃置牌获得之", event.cards], true);
 			"step 1";
@@ -377,45 +743,72 @@ export default {
 
 	vibe_zhuhuan_jutian: {
 		trigger: { source: "damageEnd" },
-		direct: true,
 		filter(event, player) {
-			return event.player && event.player != player && !player.hasSkill("vibe_zhuhuan_jutian_used");
+			if (!event.player || event.player == player) {
+				return false;
+			}
+			var canYazhi = !player.hasSkill("vibe_zhuhuan_jutian_yazhi") && game.hasPlayer(current => current.isFriendOf(event.player));
+			var canFuzhu = !player.hasSkill("vibe_zhuhuan_jutian_fuzhu") && game.hasPlayer(current => current.isFriendOf(player));
+			return canYazhi || canFuzhu;
+		},
+		async cost(event, trigger, player) {
+			var canYazhi = !player.hasSkill("vibe_zhuhuan_jutian_yazhi") && game.hasPlayer(current => current.isFriendOf(trigger.player));
+			var canFuzhu = !player.hasSkill("vibe_zhuhuan_jutian_fuzhu") && game.hasPlayer(current => current.isFriendOf(player));
+			
+			event.result = { bool: false };
+			
+			while (true) {
+				var choices = [];
+				if (canYazhi) choices.push("压制敌势力");
+				if (canFuzhu) choices.push("辅助友势力");
+				choices.push("cancel2");
+				
+				var controlResult = (await player.chooseControl(choices).set("prompt", get.prompt("vibe_zhuhuan_jutian"))).result;
+				if (!controlResult || !controlResult.control || controlResult.control === "cancel2") {
+					return;
+				}
+				
+				var choice = controlResult.control;
+				var str = choice === "压制敌势力" ? "拒天：选择与其同势力的一名角色" : "拒天：选择与你同势力的一名角色";
+				
+				var targetResult = (await player.chooseTarget(1, str, function(card, player, target) {
+					if (_status.event.choice === "压制敌势力") return target.isFriendOf(_status.event.sourcePlayer);
+					return target.isFriendOf(player);
+				}).set("choice", choice).set("sourcePlayer", trigger.player)).result;
+				
+				if (targetResult && targetResult.bool && targetResult.targets && targetResult.targets.length) {
+					event.result = {
+						bool: true,
+						cost_data: { choice: choice, target: targetResult.targets[0] }
+					};
+					return;
+				}
+			}
 		},
 		content() {
-			"step 0";
-			player.addTempSkill("vibe_zhuhuan_jutian_used", "roundStart");
-			player.chooseControl("压制同势力", "补牌同势力").set("prompt", "拒天：请选择效果");
-			"step 1";
-			event.choice = result.control;
-			if (event.choice == "压制同势力") {
-				player.chooseTarget("选择与受伤角色同势力的一名角色", function (card, player, target) {
-					return target.isFriendOf(trigger.player);
-				});
-			} else {
-				player.chooseTarget("选择与你同势力的一名角色", function (card, player, target) {
-					return target.isFriendOf(player);
-				});
-			}
-			"step 2";
-			if (!result.bool || !result.targets || !result.targets.length) {
-				event.finish();
-				return;
-			}
-			event.targetx = result.targets[0];
-			if (event.choice == "压制同势力") {
-				var needDiscard = Math.max(0, event.targetx.countCards("h") - event.targetx.hp);
+			var choice = event.cost_data.choice;
+			var targetx = event.cost_data.target;
+			player.logSkill("vibe_zhuhuan_jutian", targetx);
+			if (choice === "压制敌势力") {
+				player.addTempSkill("vibe_zhuhuan_jutian_yazhi", "roundStart");
+				var needDiscard = Math.max(0, targetx.countCards("h") - trigger.player.hp);
 				if (needDiscard > 0) {
-					event.targetx.chooseToDiscard(needDiscard, true, "h");
+					targetx.chooseToDiscard(needDiscard, true, "h");
 				}
 			} else {
-				var needDraw = Math.max(0, event.targetx.maxHp - event.targetx.countCards("h"));
+				player.addTempSkill("vibe_zhuhuan_jutian_fuzhu", "roundStart");
+				var needDraw = Math.max(0, trigger.player.maxHp - targetx.countCards("h"));
 				if (needDraw > 0) {
-					event.targetx.draw(needDraw);
+					targetx.draw(needDraw);
 				}
 			}
 		},
 		subSkill: {
-			used: {
+			yazhi: {
+				charlotte: true,
+				sub: true,
+			},
+			fuzhu: {
 				charlotte: true,
 				sub: true,
 			},
@@ -442,7 +835,7 @@ export default {
 				event.finish();
 				return;
 			}
-			player.chooseTarget("选择一名其他角色，视为对其使用【决斗】", function (card, player, target2) {
+			player.chooseTarget(true, "选择一名其他角色，视为对其使用【决斗】", function (card, player, target2) {
 				return target2 != player && target2 != target;
 			});
 			"step 2";

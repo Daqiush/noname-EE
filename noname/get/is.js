@@ -527,7 +527,7 @@ export class Is {
 	 * @param { string | Player } name
 	 */
 	jun(name) {
-		if (get.mode() == "guozhan") {
+		if (get.mode() == "guozhan" || get.mode() == "guozhan_ee") {
 			if (name instanceof lib.element.Player) {
 				if (name.isUnseen && name.isUnseen(0)) {
 					return false;

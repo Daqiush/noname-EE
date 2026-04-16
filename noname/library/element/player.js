@@ -3229,7 +3229,7 @@ export class Player extends HTMLDivElement {
 			this.node.name.classList.add("long");
 		}
 		if (info.hasHiddenSkill && !this.noclick) {
-			if (!_status.video && get.mode() != "guozhan") {
+			if (!_status.video && get.mode() != "guozhan" && get.mode() != "guozhan_ee") {
 				this.classList.add("unseen_show");
 			}
 			this.classList.add(_status.video ? "unseen_v" : "unseen");
@@ -3250,7 +3250,7 @@ export class Player extends HTMLDivElement {
 
 			this.node.count.classList.add("p2");
 			if (info2.hasHiddenSkill && !this.noclick) {
-				if (!_status.video && get.mode() != "guozhan") {
+				if (!_status.video && get.mode() != "guozhan" && get.mode() != "guozhan_ee") {
 					this.classList.add("unseen2_show");
 				}
 				this.classList.add(_status.video ? "unseen2_v" : "unseen2");
@@ -3283,10 +3283,10 @@ export class Player extends HTMLDivElement {
 			map = { skill: map };
 		}
 		for (const i of ["name", "name1", "name2"]) {
-			if (i == "name" && get.mode() == "guozhan") {
+			if (i == "name" && (get.mode() == "guozhan" || get.mode() == "guozhan_ee")) {
 				continue;
 			}
-			if (i == "name1" && this.name === this.name1 && get.mode() != "guozhan") {
+			if (i == "name1" && this.name === this.name1 && get.mode() != "guozhan" && get.mode() != "guozhan_ee") {
 				continue;
 			}
 			const list = lib.characterSubstitute[this[i]];
@@ -3451,7 +3451,7 @@ export class Player extends HTMLDivElement {
 				}
 
 				str += "　(" + info[0].slice(0, 12) + " 的房间)";
-				if (config.mode != "guozhan" && (config.mode != "doudizhu" || config.doudizhu_mode != "online")) {
+				if (config.mode != "guozhan" && config.mode != "guozhan_ee" && (config.mode != "doudizhu" || config.doudizhu_mode != "online")) {
 					str += "【";
 					for (var i = 0; i < config.cardPack.length; i++) {
 						str += get.translation(config.cardPack[i] + "_card_config").slice(0, 2);
@@ -11568,7 +11568,7 @@ export class Player extends HTMLDivElement {
 						break;
 				}
 			}
-		} else if (mode == "guozhan") {
+		} else if (mode == "guozhan" || mode == "guozhan_ee") {
 			if (player.identity == "ye") {
 				targets = game[method](function (target) {
 					if (func && !func(target)) {
@@ -11679,7 +11679,7 @@ export class Player extends HTMLDivElement {
 						break;
 				}
 			}
-		} else if (mode == "guozhan") {
+		} else if (mode == "guozhan" || mode == "guozhan_ee") {
 			if (player.identity == "ye") {
 				targets = [];
 			} else {
@@ -11717,7 +11717,7 @@ export class Player extends HTMLDivElement {
 		return !this.isFriendOf.call(this, ...arguments);
 	}
 	isFriendOf(player) {
-		if (get.mode() == "guozhan") {
+		if (get.mode() == "guozhan" || get.mode() == "guozhan_ee") {
 			if (this == player) {
 				return true;
 			}
@@ -12056,7 +12056,7 @@ export class Player extends HTMLDivElement {
 		return false;
 	}
 	isMajor() {
-		if (get.mode() == "guozhan") {
+		if (get.mode() == "guozhan" || get.mode() == "guozhan_ee") {
 			if (this.identity == "unknown") {
 				return false;
 			}
@@ -12143,7 +12143,7 @@ export class Player extends HTMLDivElement {
 		return false;
 	}
 	isMinor(nomajor) {
-		if (get.mode() == "guozhan") {
+		if (get.mode() == "guozhan" || get.mode() == "guozhan_ee") {
 			if (this.identity == "unknown" || (!nomajor && this.isMajor())) {
 				return false;
 			}
@@ -12543,7 +12543,7 @@ export class Player extends HTMLDivElement {
 		if (typeof num != "number") {
 			num = 0;
 		}
-		if (mode == "identity" || mode == "guozhan") {
+		if (mode == "identity" || mode == "guozhan" || mode == "guozhan_ee") {
 			for (var i = 0; i < game.players.length; i++) {
 				if (game.players[i].ai.shown == 0 && game.players[i] != this) {
 					num--;
@@ -12557,7 +12557,7 @@ export class Player extends HTMLDivElement {
 	}
 	isUnknown(player) {
 		var mode = get.mode();
-		if (mode == "identity" || mode == "guozhan") {
+		if (mode == "identity" || mode == "guozhan" || mode == "guozhan_ee") {
 			if (this.ai.shown == 0 && this != player) {
 				return true;
 			}

@@ -275,6 +275,8 @@ export async function loadExtension(extension) {
 				// 我就是被拷打，成为新的1103，受到白鼠群的嘲笑谩骂，我也绝不再次遍历！
 				if (content.mode === "guozhan") {
 					lib.characterGuozhanFilter.add(content.name);
+				} else if (content.mode === "guozhan_ee") {
+					lib.characterGuozhanEEFilter.add(content.name);
 				}
 				for (const [charaName, character] of Object.entries(content.character)) {
 					if (lib.config.forbidai_user && lib.config.forbidai_user.includes(charaName)) {

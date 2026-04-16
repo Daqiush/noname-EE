@@ -619,9 +619,9 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 	const characterList = Object.keys(pack).filter(character => {
 		return !character.startsWith("gz_shibing") && !get.is.jun(character) && !lib.config.guozhan_banned?.includes(character) && lib.character[character]?.group !== "mahjong";
 	});
-	// 获取 mahjong 势力武将列表（用于彩蛋）
+	// 获取 mahjong 势力武将列表（用于彩蛋），排除士兵
 	const mahjongCharacters = Object.keys(pack).filter(character => {
-		return lib.character[character]?.group === "mahjong" && !lib.config.guozhan_banned?.includes(character);
+		return !character.startsWith("gz_shibing") && lib.character[character]?.group === "mahjong" && !lib.config.guozhan_banned?.includes(character);
 	});
 	Reflect.set(_status, "characterlist", characterList.slice(0));
 	Reflect.set(_status, "yeidentity", []);
@@ -907,11 +907,11 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 			return ui.dialog.buttons.some(but => {
 				if (but === button) return false;
 				// @ts-expect-error 祖宗之法就是这么写的
-				return isValidCharacterPair(button.link, but.link);
+				return game.isValidCharacterPair(button.link, but.link);
 			});
 		}
 		// @ts-expect-error 祖宗之法就是这么写的
-		return isValidCharacterPair(ui.selected.buttons[0].link, button.link);
+		return game.isValidCharacterPair(ui.selected.buttons[0].link, button.link);
 	}
 
 	function chooseCharacterCheck() {
@@ -923,11 +923,11 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 			for (let j = i + 1; j < buttons.length; ++j) {
 				const button2 = buttons[j];
 
-				if (isValidCharacterPair(button1.link, button2.link) || isValidCharacterPair(button2.link, button1.link)) {
+				if (game.isValidCharacterPair(button1.link, button2.link) || game.isValidCharacterPair(button2.link, button1.link)) {
 					let mainx = button1.link;
 					let vicex = button2.link;
 
-					if (!isValidCharacterPair(mainx, vicex) || (isValidCharacterPair(vicex, mainx) && get.guozhanReverse(mainx, vicex))) {
+					if (!game.isValidCharacterPair(mainx, vicex) || (game.isValidCharacterPair(vicex, mainx) && get.guozhanReverse(mainx, vicex))) {
 						mainx = button2.link;
 						vicex = button1.link;
 					}

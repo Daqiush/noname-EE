@@ -1834,7 +1834,7 @@ export class Get extends GetCompatible {
 					return `${get.cnNumber(parseInt(config.number))}人${config.double_nei ? "双内" : ""}${config.enable_commoner ? "带民" : ""}${config.double_character ? "双将" : ""}身份`;
 			}
 		}
-		if (config.mode == "guozhan") {
+		if (config.mode == "guozhan" || config.mode == "guozhan_ee") {
 			if (config.separatism) {
 				return "群雄割据";
 			}
@@ -1989,7 +1989,7 @@ export class Get extends GetCompatible {
 					}
 				}
 			}
-		} else if (mode == "guozhan") {
+		} else if (mode == "guozhan" || mode == "guozhan_ee") {
 			for (var i = 0; i < game.players.length; i++) {
 				if (get.is.jun(game.players[i]) && !game.players[i].isUnseen()) {
 					if (skill && !game.players[i].hasSkill(skill)) {

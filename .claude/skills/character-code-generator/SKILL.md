@@ -1,6 +1,6 @@
 ---
 name: character-code-generator
-description: "将武将描述转换为代码化的技能实现。当用户说'把位于xxx路径的武将代码化'时，先读取 skills/character-code-generator/keyword-library.json 检索已缓存的技能关键词与代码写法，再在项目代码库中补充搜索，最终将武将各部分代码分别添加到 mode\\guozhan_ee\\src\\character\\vibe.js、mode\\guozhan_ee\\src\\translate\\character\\vibe.js、mode\\guozhan_ee\\src\\translate\\skill\\character\\vibe.js、mode\\guozhan_ee\\src\\skill\\character\\vibe.js、mode\\guozhan_ee\\src\\voices\\character\\vibe.js。"
+description: "将武将描述转换为代码化的技能实现。当用户说'把位于xxx路径的武将代码化'时，必须先阅读目标 txt 文件头部的规则/要求，并严格按该要求写代码；然后读取 skills/character-code-generator/keyword-library.json 检索已缓存的技能关键词与代码写法，再在项目代码库中补充搜索，最终将武将各部分代码分别添加到 mode\\guozhan_ee\\src\\character\\vibe.js、mode\\guozhan_ee\\src\\translate\\character\\vibe.js、mode\\guozhan_ee\\src\\translate\\skill\\character\\vibe.js、mode\\guozhan_ee\\src\\skill\\character\\vibe.js、mode\\guozhan_ee\\src\\voices\\character\\vibe.js。"
 compatibility:
     required_tools: ["read", "write", "grep", "glob", "bash"]
 ---
@@ -240,6 +240,75 @@ skill_id: {
 - 新增条目时，必须对照 `entry-template.json` 填写，并执行一次去重检查
 - 若需要改写底层代码或新增底层函数，必须先获得用户明确同意
 - 写入 `*_info` 前，必须逐条对照输入文档执行一次“原文一致性检查”
+- 对 `trigger: { global: "loseAfter" }` 且语义为“角色弃置自己的牌”类技能，必须同时校验：
+    - `event.type === "discard"`
+    - `(event.discarder || event.getParent(2)?.player) === event.player`
+- 明确禁止仅使用 `event.player == event.getParent()?.player` 判定“自己弃置”，该写法会在部分链路误判为可触发
+- 当技能描述中包含“x势力技”时（如“蜀势力技”、“群雄势力技”），必须在技能实现代码的首层添加 `groupSkill: "x"` 属性（其中x为对应势力代码，如 `shu`、`qun` 等）。
+- 当描述仅为“当你需要使用X时”，必须使用 `enable: "chooseToUse"`（或等价实现），禁止混入 `chooseToRespond`。
+- 当描述仅为“当你需要打出X时”，必须使用 `enable: "chooseToRespond"`（或等价实现），禁止混入 `chooseToUse`。
+- 当描述明确同时包含“需要使用/打出”两类时机时，才允许使用 `enable: ["chooseToUse", "chooseToRespond"]`。
+- 对“需要使用牌”的转化/虚拟使用类技能（尤其 `enable: "chooseToUse"`），若可转化牌名不是玩家当前手牌中可见原名，必须补 `hiddenCard(player, name)`，确保系统在无原名手牌时仍开放转化/虚拟使用入口。
+- `hiddenCard(player, name)` 必须显式校验可转化牌名集合（如 `sha`/`wuxie`）与资源条件（如存在可转化装备手牌），禁止只写宽泛返回。
+- “不能被抵消”与“不能被响应”必须区分：前者优先使用 `nowuxie` 与 `directHit2` 语义；`directHit` 仅用于“不能被响应”。
+- 若文案是“你可以使用一张A，然后视为使用B”（含“先使用…再视为使用…”），实现语义必须是两段式：先使用A的实体牌，再额外视为使用B的虚拟牌；严禁误写成“将A当B使用”。
+- 仅当文案是“将A当B使用/打出”时，才使用 `viewAs + filterCard(A)` 的单段转化模式。
+- 对上述两段式语义，生成代码前必须在仓库中检索同类实现再落地（优先检索关键词：`然后视为使用`、`chooseUseTarget`、`useCard`），不得凭空套用“当作使用”模板。
+- 语义词”同势力/相同势力角色”默认包含自己；仅当描述明确写”其他角色/除你外”时才排除自己，禁止无依据添加 `event.player == player` 过滤
+- 严禁臆造”引擎内置函数/字段”；实现前必须先检索并确认 API 在代码库中存在，优先复用现有引擎接口。
+
+## 联机模式序列化约束
+
+联机模式下，技能函数会被 `Function.prototype.toString()` 序列化后广播给其他客户端，并通过 `security.js` 的 `_exec` / `_eval` 在受限上下文中重新执行。该上下文仅有 `lib`、`game`、`ui`、`get`、`ai`、`_status`、`gnc` 七个顶级变量，**模块作用域的局部函数和闭包变量均不可用**。
+
+### 规则1：模块局部函数不得在可序列化函数中直接引用
+
+- `content.js`、`game.js` 等模块文件中以 `function foo()` 或 `const foo = ...` 形式定义的函数，在联机 eval 上下文中不存在。
+- 若某函数（如 `filterButton`、`chooseCharacterCheck`、`check`）会被 `next.set(...)` 注册到事件上并在联机时广播执行，其函数体内不得直接调用任何模块局部函数。
+- **正确做法**：将需要共享的工具函数挂载到 `game` 对象上（`game.myHelper = function(...) {...}`），在序列化函数中改写为 `game.myHelper(...)`。挂载代码应放在模块初始化阶段（import 之后、class 定义之前）。
+- **示例**（`game.js`）：
+  ```javascript
+  // 挂载到 game，使 eval 上下文可访问
+  game.isValidCharacterPair = function (name1, name2) {
+      if (_status.separatism) return true;
+      return isValidCharacterCombination(name1, name2);
+  };
+  // 之后 filterButton / chooseCharacterCheck 中改用 game.isValidCharacterPair(...)
+  ```
+
+### 规则2：`chooseButton.backup` 的闭包变量不得在 `content` 中直接引用
+
+- `backup(result, player)` 返回的对象会被存入 `lib.skill[skillName + “_backup”]`，并通过 `event._sendskill` 序列化广播。
+- `content` 函数被 stringify 后重新 eval，**所有从 `backup` 闭包捕获的局部变量（如 `color`、`target`、`num`）均会丢失**，导致联机端执行时变量为 `undefined`，技能只有台词没有实际效果。
+- **正确做法**：将运行时决策值作为**普通属性**写入 backup 返回对象（原始值可序列化），`content` 中改从 `lib.skill[event.name].属性名` 读取（注意：backup content 的 event 由 `game.createEvent(skillName)` 创建，只有 `event.name` 而无 `event.skill`）。
+- **示例**（`pokemon_tanwei` 阴技能）：
+  ```javascript
+  backup(result, player) {
+      const color = result.control === “红色” ? “red” : “black”;
+      return {
+          log: false,
+          color: color,           // ✅ 普通属性，序列化后保留
+          async content(event, trigger, player) {
+              const color = lib.skill[event.name].color;  // ✅ 运行时从 lib.skill 读取（用 event.name，不是 event.skill）
+              const cards = player.getCards(“h”, card => get.color(card) == color);
+              // ...
+          },
+      };
+  },
+  ```
+- **禁止**：
+  ```javascript
+  backup(result, player) {
+      const color = result.control === “红色” ? “red” : “black”;
+      return {
+          async content(event, trigger, player) {
+              // ❌ color 是闭包变量，联机序列化后丢失
+              const cards = player.getCards(“h”, card => get.color(card) == color);
+          },
+      };
+  },
+  ```
+- 该规则适用于所有通过 `backup` 传递运行时状态到 `content` 的场景，包括但不限于：选择的颜色、数量、目标名、牌名等。
 
 ## 示例
 

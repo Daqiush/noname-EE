@@ -1613,7 +1613,7 @@ game.import("card", function () {
 							if (get.mode() === "identity" && target.identity === "fan") {
 								res += 2.4;
 							}
-							if ((get.mode() === "guozhan" && player.identity !== "ye" && player.identity === target.identity) || (get.mode() === "identity" && player.identity === "zhu" && (target.identity === "zhong" || target.identity === "mingzhong"))) {
+							if (((get.mode() === "guozhan" || get.mode() === "guozhan_ee") && player.identity !== "ye" && player.identity === target.identity) || (get.mode() === "identity" && player.identity === "zhu" && (target.identity === "zhong" || target.identity === "mingzhong"))) {
 								res -= 0.8 * player.countCards("he");
 							}
 							return res;
@@ -2001,7 +2001,7 @@ game.import("card", function () {
 							if (get.mode() === "identity" && target.identity === "fan") {
 								res += 2.4;
 							}
-							if ((get.mode() === "guozhan" && player.identity !== "ye" && player.identity === target.identity) || (get.mode() === "identity" && player.identity === "zhu" && (target.identity === "zhong" || target.identity === "mingzhong"))) {
+							if (((get.mode() === "guozhan" || get.mode() === "guozhan_ee") && player.identity !== "ye" && player.identity === target.identity) || (get.mode() === "identity" && player.identity === "zhu" && (target.identity === "zhong" || target.identity === "mingzhong"))) {
 								res -= 0.8 * player.countCards("he");
 							}
 							return res;
@@ -2100,7 +2100,7 @@ game.import("card", function () {
 				},
 				ai: {
 					wuxie(target, card, player, viewer) {
-						if (get.mode() === "guozhan") {
+						if ((get.mode() === "guozhan" || get.mode() === "guozhan_ee")) {
 							if (!_status._aozhan) {
 								if (!player.isMajor()) {
 									if (!viewer.isMajor()) {
@@ -3154,7 +3154,7 @@ game.import("card", function () {
 				defaultYingbianEffect: "draw",
 				contentBefore() {
 					"step 0";
-					if (get.mode() === "guozhan" && get.cardtag(card, "guo")) {
+					if ((get.mode() === "guozhan" || get.mode() === "guozhan_ee") && get.cardtag(card, "guo")) {
 						var trigger = event.getParent(2)._trigger;
 						if (trigger.name !== "phaseJudge" && trigger.card.name !== "wuxie" && trigger.targets.length > 1) {
 							player
@@ -3426,7 +3426,7 @@ game.import("card", function () {
 				forced: true,
 				audio: "qinglong_skill",
 				filter(event, player) {
-					return get.mode() === "guozhan" && event.card.name === "sha";
+					return (get.mode() === "guozhan" || get.mode() === "guozhan_ee") && event.card.name === "sha";
 				},
 				content() {
 					if (!_status.qinglong_guozhan) {
@@ -3810,7 +3810,7 @@ game.import("card", function () {
 				trigger: { player: ["shaMiss", "eventNeutralized"] },
 				direct: true,
 				filter(event, player) {
-					if (get.mode() === "guozhan" || !event.card || event.card.name !== "sha") {
+					if ((get.mode() === "guozhan" || get.mode() === "guozhan_ee") || !event.card || event.card.name !== "sha") {
 						return false;
 					}
 					return event.target.isIn() && player.canUse("sha", event.target, false) && (player.hasSha() || (_status.connectMode && player.countCards("hs")));
@@ -3964,7 +3964,7 @@ game.import("card", function () {
 				forced: true,
 				firstDo: true,
 				filter(event, player) {
-					if (event.card.name !== "sha" || get.mode() === "guozhan") {
+					if (event.card.name !== "sha" || (get.mode() === "guozhan" || get.mode() === "guozhan_ee")) {
 						return false;
 					}
 					var card = event.card;
@@ -3994,7 +3994,7 @@ game.import("card", function () {
 						if (card.name !== "sha") {
 							return;
 						}
-						if (get.mode() === "guozhan") {
+						if ((get.mode() === "guozhan" || get.mode() === "guozhan_ee")) {
 							return;
 						}
 						if (range[1] === -1) {
@@ -4017,7 +4017,7 @@ game.import("card", function () {
 				equipSkill: true,
 				trigger: { player: "useCard2" },
 				filter(event, player) {
-					if (get.mode() !== "guozhan") {
+					if (get.mode() !== "guozhan" && get.mode() !== "guozhan_ee") {
 						return false;
 					}
 					if (event.card.name !== "sha") {
@@ -5199,6 +5199,7 @@ game.import("card", function () {
 			qinglong_guozhan_info: "锁定技，当你使用【杀】指定目标后，所有目标角色不能明置武将牌直到此【杀】结算完毕为止。",
 			qinglong_info: "当你使用的【杀】被目标角色使用的【闪】抵消时，你可以对其使用一张【杀】（无距离限制）。",
 			qinglong_info_guozhan: "锁定技，当你使用【杀】指定目标后，所有目标角色不能明置武将牌直到此【杀】结算完毕为止。",
+			qinglong_info_guozhan_ee: "锁定技，当你使用【杀】指定目标后，所有目标角色不能明置武将牌直到此【杀】结算完毕为止。",
 			zhangba_skill_info: "你可以将两张手牌当【杀】使用或打出。",
 			zhangba_info: "你可以将两张手牌当【杀】使用或打出。",
 			guanshi_skill_info: "当你使用的【杀】被目标角色使用的【闪】抵消时，你可以弃置两张牌，令此【杀】依然对其造成伤害。",
@@ -5206,6 +5207,7 @@ game.import("card", function () {
 			fangtian_skill_info: "你使用的【杀】若是你最后的手牌，你可以额外选择至多两个目标。",
 			fangtian_info: "你使用的【杀】若是你最后的手牌，你可以额外选择至多两个目标。",
 			fangtian_info_guozhan: "你使用【杀】可以指定任意名角色为目标（不能包含势力相同的角色），若任意一名目标角色使用【闪】抵消了此【杀】，则此【杀】对剩余的目标角色无效。",
+			fangtian_info_guozhan_ee: "你使用【杀】可以指定任意名角色为目标（不能包含势力相同的角色），若任意一名目标角色使用【闪】抵消了此【杀】，则此【杀】对剩余的目标角色无效。",
 			qilin_skill_info: "当你使用【杀】对目标角色造成伤害时，你可以弃置其装备区里的一张坐骑牌。",
 			qilin_info: "当你使用【杀】对目标角色造成伤害时，你可以弃置其装备区里的一张坐骑牌。",
 			wugu_info: "出牌阶段，对所有角色使用。（选择目标后）你从牌堆顶亮出等同于目标数量的牌，每名目标角色获得这些牌中（剩余的）的任意一张。",

@@ -274,6 +274,9 @@ export class PlayerGuozhan extends Player {
 	 * @returns { string[] } 势力集合
 	 */
 	getIdentities() {
+		const mainUnseen = this.isUnseen(0);
+		const viceUnseen = this.isUnseen(1);
+
 		// 未确定势力
 		if (this.identity === "unknown") {
 			return [];
@@ -290,8 +293,9 @@ export class PlayerGuozhan extends Player {
 			}
 		}
 		
-		// 如果是临时使用副将势力的情况（_viceGroupTemp 为 true）
-		if (this._viceGroupTemp) {
+		// 仅在“主将暗置且副将明置”时，才按临时副将势力集合返回。
+		// 这样可避免 _viceGroupTemp 残留导致双明置仍误判为副将势力。
+		if (this._viceGroupTemp && mainUnseen && !viceUnseen) {
 			// 直接从 lib.character 获取，确保获取到 Character 实例的属性
 			const viceInfo = lib.character[this.name2];
 			const viceGroup = viceInfo?.group;
@@ -315,6 +319,12 @@ export class PlayerGuozhan extends Player {
 				// 普通单势力副将
 				return [viceGroup];
 			}
+		}
+
+		if (this._viceGroupTemp && !mainUnseen) {
+			delete this._viceGroupTemp;
+			delete this._viceSecondGroup;
+			delete this._validGroup;
 		}
 		
 		// 正常情况，势力集合只包含一个 identity
@@ -446,7 +456,7 @@ export class PlayerGuozhan extends Player {
 					this._confirmedYeGroup = "han";
 					this.exposeYeToGroup("han");
 				}
-			} else if (viceSecondGroup) {
+			} else if (viceSecondGroup && viceSecondGroup !== viceGroup) {
 				// 双势力副将，分别判断每个势力
 				const group1 = viceGroup;
 				const group2 = viceSecondGroup;
@@ -1391,6 +1401,10 @@ export class PlayerGuozhan extends Player {
 		if (!this.isUnseen(2)) {
 			return;
 		}
+		
+		// 记录明置前的状态（是否有武将暗置）
+		const wasHiddenBefore = this.isUnseen(0) || this.isUnseen(1);
+		
 		// @ts-expect-error 类型就是这么写的
 		game.addVideo("showCharacter", this, num);
 		
@@ -1540,21 +1554,23 @@ export class PlayerGuozhan extends Player {
 				// @ts-expect-error 类型就是这么写的
 				_status.initshown = true;
 			}
-			if (!this.isUnseen(2) && !this._mingzhied) {
-				this._mingzhied = true;
-				if (this.singleHp) {
-					this.doubleDraw();
-				}
-				if (this.perfectPair()) {
-					var next = game.createEvent("guozhanDraw");
-					// @ts-expect-error 类型就是这么写的
-					next.player = this;
-					// @ts-expect-error 类型就是这么写的
-					next.setContent("zhulian");
-				}
-			}
 			if (showYe) {
 				this.addMark("yexinjia_mark", 1);
+			}
+		}
+		// 检查是否从暗置变为两个都明置（独立于viceChanged条件）
+		// 如果明置前有武将暗置，明置后两个都明置了，就获得阴阳鱼标记
+		if (wasHiddenBefore && !this.isUnseen(0) && !this.isUnseen(1) && !this._mingzhied) {
+			this._mingzhied = true;
+			if (this.singleHp) {
+				this.doubleDraw();
+			}
+			if (this.perfectPair()) {
+				var next = game.createEvent("guozhanDraw");
+				// @ts-expect-error 类型就是这么写的
+				next.player = this;
+				// @ts-expect-error 类型就是这么写的
+				next.setContent("zhulian");
 			}
 		}
 		// @ts-expect-error 类型就是这么写的

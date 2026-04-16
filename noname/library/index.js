@@ -6705,7 +6705,7 @@ export class Library {
 					init: true,
 					onclick(bool) {
 						game.saveConfig("change_identity", bool, this._link.config.mode);
-						if (get.mode() != "guozhan" || (!_status.event.getParent().showConfig && !_status.event.showConfig)) {
+						if (get.mode() != this._link.config.mode || (!_status.event.getParent().showConfig && !_status.event.showConfig)) {
 							return;
 						}
 						var dialog;
@@ -6729,7 +6729,7 @@ export class Library {
 					init: true,
 					onclick(bool) {
 						game.saveConfig("change_choice", bool, this._link.config.mode);
-						if (get.mode() != "guozhan" || (!_status.event.getParent().showConfig && !_status.event.showConfig)) {
+						if (get.mode() != this._link.config.mode || (!_status.event.getParent().showConfig && !_status.event.showConfig)) {
 							return;
 						}
 						if (!ui.cheat && get.config("change_choice")) {
@@ -6756,7 +6756,7 @@ export class Library {
 					intro: "游戏结束后可选择用相同的武将再进行一局游戏",
 					onclick(bool) {
 						game.saveConfig("continue_game", bool, this._link.config.mode);
-						if (get.config("continue_game") && get.mode() == "guozhan") {
+						if (get.config("continue_game") && get.mode() == this._link.config.mode) {
 							if (!ui.continue_game && _status.over && !_status.brawl && !game.no_continue_game) {
 								ui.continue_game = ui.create.control("再战", game.reloadCurrent);
 							}
@@ -6771,7 +6771,7 @@ export class Library {
 					init: true,
 					onclick(bool) {
 						game.saveConfig("dierestart", bool, this._link.config.mode);
-						if (get.config("dierestart") && get.mode() == "guozhan") {
+						if (get.config("dierestart") && get.mode() == this._link.config.mode) {
 							if (!ui.restart && game.me.isDead() && !_status.connectMode) {
 								ui.restart = ui.create.control("restart", game.reload);
 							}
@@ -6786,7 +6786,7 @@ export class Library {
 					init: false,
 					onclick(bool) {
 						game.saveConfig("revive", bool, this._link.config.mode);
-						if (get.config("revive") && get.mode() == "guozhan") {
+						if (get.config("revive") && get.mode() == this._link.config.mode) {
 							if (!ui.revive && game.me.isDead()) {
 								ui.revive = ui.create.control("revive", ui.click.dierevive);
 							}
@@ -7099,7 +7099,7 @@ export class Library {
 					init: true,
 					onclick(bool) {
 						game.saveConfig("change_identity", bool, this._link.config.mode);
-						if (get.mode() != "guozhan" || (!_status.event.getParent().showConfig && !_status.event.showConfig)) {
+						if (get.mode() != this._link.config.mode || (!_status.event.getParent().showConfig && !_status.event.showConfig)) {
 							return;
 						}
 						var dialog;
@@ -7123,7 +7123,7 @@ export class Library {
 					init: true,
 					onclick(bool) {
 						game.saveConfig("change_choice", bool, this._link.config.mode);
-						if (get.mode() != "guozhan" || (!_status.event.getParent().showConfig && !_status.event.showConfig)) {
+						if (get.mode() != this._link.config.mode || (!_status.event.getParent().showConfig && !_status.event.showConfig)) {
 							return;
 						}
 						if (!ui.cheat && get.config("change_choice")) {
@@ -11818,7 +11818,7 @@ export class Library {
 					return true;
 				}
 				var double_character = false;
-				if (lib.configOL.mode == "guozhan") {
+				if (lib.configOL.mode == "guozhan" || lib.configOL.mode == "guozhan_ee") {
 					double_character = true;
 				} else if (lib.configOL.double_character && (lib.configOL.mode == "identity" || lib.configOL.mode == "stone")) {
 					double_character = true;
@@ -11833,7 +11833,7 @@ export class Library {
 					return true;
 				}
 				var double_character = false;
-				if (get.mode() == "guozhan") {
+				if (get.mode() == "guozhan" || get.mode() == "guozhan_ee") {
 					double_character = true;
 				} else if (get.config("double_character") && (lib.config.mode == "identity" || lib.config.mode == "stone")) {
 					double_character = true;
@@ -13878,7 +13878,7 @@ export class Library {
 							} else {
 								player.setIdentity("cai");
 							}
-							if (!lib.configOL.observe_handcard && (lib.configOL.mode == "identity" || lib.configOL.mode == "guozhan")) {
+							if (!lib.configOL.observe_handcard && (lib.configOL.mode == "identity" || lib.configOL.mode == "guozhan" || lib.configOL.mode == "guozhan_ee")) {
 								if (observe && !player.identityShown) {
 									player.setIdentity("cai");
 									player.forceShown = false;
@@ -13901,16 +13901,16 @@ export class Library {
 					next.setContent(lib.init.startOnline);
 					if (observe) {
 						next.custom.replace.target = function (player) {
-							if (!lib.configOL.observe_handcard && lib.configOL.mode == "guozhan") {
+							if (!lib.configOL.observe_handcard && (lib.configOL.mode == "guozhan" || lib.configOL.mode == "guozhan_ee")) {
 								return;
 							}
 							if (player.isAlive()) {
-								if (!game.me.identityShown && lib.configOL.mode == "guozhan") {
+								if (!game.me.identityShown && (lib.configOL.mode == "guozhan" || lib.configOL.mode == "guozhan_ee")) {
 									game.me.node.identity.firstChild.innerHTML = "猜";
 									game.me.node.identity.dataset.color = "unknown";
 								}
 								game.swapPlayer(player);
-								if (!game.me.identityShown && lib.configOL.mode == "guozhan") {
+								if (!game.me.identityShown && (lib.configOL.mode == "guozhan" || lib.configOL.mode == "guozhan_ee")) {
 									game.me.node.identity.firstChild.innerHTML = "";
 								}
 							}

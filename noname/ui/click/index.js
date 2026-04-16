@@ -775,7 +775,7 @@ export class Click {
 				}
 			}
 		} else {
-			if (get.mode() == "guozhan") {
+			if (get.mode() == "guozhan" || get.mode() == "guozhan_ee") {
 				list = { wei: "魏", shu: "蜀", wu: "吴", qun: "群", jin: "晋", ye: "野" };
 				if (_status.forceKey) {
 					list.key = "键";
@@ -792,7 +792,7 @@ export class Click {
 			}
 			var rect = this.parentNode.getBoundingClientRect();
 			this._customintro = function (uiintro) {
-				if (get.mode() == "guozhan") {
+				if (get.mode() == "guozhan" || get.mode() == "guozhan_ee") {
 					uiintro.clickintro = true;
 				} else {
 					uiintro.touchclose = true;
@@ -815,7 +815,7 @@ export class Click {
 						node.firstChild.style.fontSize = "24px";
 						node.firstChild.style.lineHeight = "24px";
 					}
-					if (get.mode() == "guozhan") {
+					if (get.mode() == "guozhan" || get.mode() == "guozhan_ee") {
 						if (source._guozhanguess) {
 							if (!source._guozhanguess.includes(i)) {
 								node.classList.add("transparent");

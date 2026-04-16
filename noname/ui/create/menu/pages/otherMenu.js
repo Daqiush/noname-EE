@@ -1079,7 +1079,7 @@ export const otherMenu = function (/** @type { boolean | undefined } */ connectM
 				row1.hide();
 				row2.hide();
 			}
-			if (lib.config.mode == "identity" || lib.config.mode == "guozhan" || lib.config.mode == "doudizhu") {
+			if (lib.config.mode == "identity" || lib.config.mode == "guozhan" || lib.config.mode == "guozhan_ee" || lib.config.mode == "doudizhu") {
 				if (
 					game.notMe ||
 					(game.me &&

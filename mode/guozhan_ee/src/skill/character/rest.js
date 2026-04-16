@@ -1,10 +1,25 @@
-import { lib, game, ui, get as _get, ai, _status } from "../../../../../noname.js";
+import { lib, game, ui, get as _get, ai, _status}  from "../../../../../noname.js";
 import { cast } from "../../../../../noname/util/index.js";
 import { GetGuozhan } from "../../patch/get.js";
 import { PlayerGuozhan, isYeIdentity } from "../../patch/player.js";
 
 /** @type {GetGuozhan}  */
 const get = cast(_get);
+
+function playerHasGroup(player, group) {
+	if (!player || !group) {
+		return false;
+	}
+	if (typeof player.hasIdentity === "function") {
+		return player.hasIdentity(group);
+	}
+	const identities = Array.isArray(player.group)
+		? player.group
+		: typeof player.group === "string"
+			? player.group.split("_")
+			: [];
+	return identities.includes(group);
+}
 
 /** @type {Record<string, Skill>} */
 export default {
@@ -840,6 +855,57 @@ export default {
 					return 1;
 				},
 			},
+		},
+	},			
+	_changeSkin: {
+		trigger: { player: "phaseBegin" },
+		forced: true,
+		filter(event, player) {
+			if (get.mode() == "guozhan_ee") {
+				return true;
+			}
+			return false;
+		},
+		content() {
+			console.log("initializing skin map");
+			const skinMap = {
+				han: "gz_pokemon_yibu_zhili",
+				qun: "gz_pokemon_yibu_rixin",
+				wei: "gz_pokemon_yibu_weiyang",
+				shu: "gz_pokemon_yibu_tanwei",
+				wu: "gz_pokemon_yibu_xingjian",
+				ye: "gz_pokemon_yibu_weixian",
+				original: "gz_pokemon_yibu",
+				};
+			for (const player of game.players) {
+				console.log("checking player", player.id, player.name1, player.name2);
+				if (player.name1 != "gz_pokemon_yibu" && player.name2 != "gz_pokemon_yibu") {
+					return;
+				}
+				const groupOrder = ["han", "qun", "wei", "shu", "wu"];
+				//判断玩家的group是否是野心家，例如1_ye，2_ye，3_ye等。把1_ye至12_ye构造一个数组，判断玩家的group是否在这个数组里。
+				const yeGroups = [];
+				for (let i = 1; i <= 12; i++) {
+					yeGroups.push(`${i}_ye`);
+				}
+				const isYe = yeGroups.some(group => player.hasIdentity(group));
+				const group = groupOrder.find(name => player.hasIdentity(name)) ?? (isYe ? "ye" : "original");
+				console.log("current group is", group);
+				const skin = skinMap[group];
+				console.log("changing skin to", skin);
+				if (!skin || player.storage.pokemon_daifa_current_skin == skin) {
+					return;
+				}
+				if (player.name1 == "gz_pokemon_yibu" && player.node.avatar) {
+					player.node.avatar.setBackground(skin, "character");
+					player.node.avatar.show();
+				}
+				if (player.name2 == "gz_pokemon_yibu" && player.node.avatar2) {
+					player.node.avatar2.setBackground(skin, "character");
+					player.node.avatar2.show();
+				}
+				player.storage.pokemon_daifa_current_skin = skin;
+			}
 		},
 	},
 	

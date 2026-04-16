@@ -2,6 +2,7 @@ import { Character } from "../../../../noname/library/element/index.js";
 
 import test from "./test.js";
 import vibe from "./vibe.js";
+import pokemon from "./pokemon.js";
 
 /** @type {Record<string, Character>} */
 export const pack = {
@@ -273,6 +274,7 @@ export const pack = {
 
 	...test,
 	...vibe,
+	...pokemon,
 };
 
 export { default as intro } from "./intro.js";

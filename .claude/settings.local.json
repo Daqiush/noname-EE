@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk '/enable.*phaseUse/,/\\\\};/ {if \\(/chooseButton/\\) {found=1} if \\(found\\) {print NR\": \"$0; if \\(/\\\\};/\\) exit}}' d:/games/noname/card/extra.js)",
+      "Bash(grep -n \"enable.*phaseUse\" d:/games/noname/mode/guozhan_ee/src/skill/character/*.js)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

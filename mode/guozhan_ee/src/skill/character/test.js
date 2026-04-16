@@ -165,6 +165,9 @@ export default {
 			return event.name != "phase" || game.phaseNumber == 0;
 		},
 		forced: true,
+		check() {
+			return false;
+		},
 		content() {
 			"step 0";
 			player.getNext().replaceCharacter(1, "gz_daqiush1", false);
@@ -249,7 +252,7 @@ export default {
 	},
 
 	// 技能D：被动技能，初始启用，可以被其他技能禁用
-	gz_daqiush_controlled_passive: {
+	gz_daqiush_controlled_passive1: {
 	    enabledByDefault: true,  // 初始状态为启用
 	    trigger: {player: "damageEnd"},
 	    // 保证AI不会使用此技能
@@ -263,13 +266,30 @@ export default {
 	    }
 	},
 	
-	// 技能E：可以使能技能D的使能位
+
+	// 技能E：被动技能，初始启用，可以被其他技能禁用
+	gz_daqiush_controlled_passive2: {
+	    enabledByDefault: true,  // 初始状态为启用
+	    trigger: {player: "damageEnd"},
+	    // 保证AI不会使用此技能
+		check() {
+			return false;
+		},
+		async content(event, trigger, player) {
+	        "step 0";
+			var damageAmount = trigger.num;
+			player.draw(damageAmount);
+	    }
+	},
+	
+	// 技能F：可以使能技能D的使能位
 	gz_daqiush_enable_passive: {
 	    enable: "phaseUse",
 	    usable: 10000,
 	    content: function () {
 	        // 使能技能D
-	        player.enableSkillBit("gz_daqiush_controlled_passive");
+	        player.enableSkillBit("gz_daqiush_controlled_passive1");
+	        player.enableSkillBit("gz_daqiush_controlled_passive2");
 	    },
 		ai: {
 			// 确保AI不会使用此技能
@@ -281,13 +301,14 @@ export default {
 	},
 	
 	
-	// 技能F：可以失能技能D的使能位
+	// 技能G：可以失能技能D的使能位
 	gz_daqiush_disable_passive: {
 	    enable: "phaseUse",
 		usable: 10000,
 	    content: function () {
 	        // 失能技能D
-	        player.disableSkillBit("gz_daqiush_controlled_passive");
+	        player.disableSkillBit("gz_daqiush_controlled_passive1");
+	        player.disableSkillBit("gz_daqiush_controlled_passive2");
 	    },
 		ai: {
 			// 确保AI不会使用此技能

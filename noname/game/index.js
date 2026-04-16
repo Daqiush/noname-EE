@@ -3862,7 +3862,7 @@ export class Game extends GameCompatible {
 					game.players[i].node.identity.firstChild.innerHTML = players[i].identity;
 					game.players[i].node.identity.dataset.color = players[i].color;
 					game.players[i].node.action.innerHTML = "行动";
-				} else if (lib.config.mode == "guozhan") {
+				} else if (lib.config.mode == "guozhan" || lib.config.mode == "guozhan_ee") {
 					game.players[i].name = players[i].name;
 					game.players[i].name1 = players[i].name1;
 					game.players[i].name2 = players[i].name2;
@@ -7314,7 +7314,7 @@ export class Game extends GameCompatible {
 			};
 			let modecharacters = lib.characterPack["mode_" + get.mode()];
 			if (modecharacters) {
-				if (get.mode() == "guozhan") {
+				if (get.mode() == "guozhan" || get.mode() == "guozhan_ee") {
 					if (modecharacters[newvid.name1]) {
 						if (newvid.name1.startsWith("gz_shibing")) {
 							newvid.name1 = newvid.name1.slice(3, 11);
@@ -9474,7 +9474,7 @@ export class Game extends GameCompatible {
 					avatar = player.node.avatar.cloneNode();
 				} else if (!player.isUnseen(1)) {
 					avatar = player.node.avatar2.cloneNode();
-				} else if (get.mode() == "guozhan" && player.node && player.node.name_seat) {
+				} else if ((get.mode() == "guozhan" || get.mode() == "guozhan_ee") && player.node && player.node.name_seat) {
 					avatar = ui.create.div(".avatar.cardbg");
 					avatar.innerHTML = player.node.name_seat.innerHTML[0];
 				} else {
@@ -9512,7 +9512,7 @@ export class Game extends GameCompatible {
 				avatar = player.node.avatar.cloneNode();
 			} else if (!player.isUnseen(1)) {
 				avatar = player.node.avatar2.cloneNode();
-			} else if (get.mode() == "guozhan" && player.node && player.node.name_seat) {
+			} else if ((get.mode() == "guozhan" || get.mode() == "guozhan_ee") && player.node && player.node.name_seat) {
 				avatar = ui.create.div(".avatar.cardbg");
 				avatar.innerHTML = player.node.name_seat.innerHTML[0];
 			} else {
@@ -9530,7 +9530,7 @@ export class Game extends GameCompatible {
 						avatar2 = target.node.avatar.cloneNode();
 					} else if (!player.isUnseen(1)) {
 						avatar2 = target.node.avatar2.cloneNode();
-					} else if (get.mode() == "guozhan" && target.node && target.node.name_seat) {
+					} else if ((get.mode() == "guozhan" || get.mode() == "guozhan_ee") && target.node && target.node.name_seat) {
 						avatar2 = ui.create.div(".avatar.cardbg");
 						avatar2.innerHTML = target.node.name_seat.innerHTML[0];
 					} else {

@@ -4,6 +4,66 @@ import { Game } from "../../../../noname/game/index.js";
 import { showYexingsContent, chooseCharacterContent, chooseCharacterOLContent, isValidCharacterCombination } from "./content.js";
 import { isYeIdentity } from "./player.js";
 
+// 注册到 game 对象，使其在联机 eval 上下文中可访问
+game.isValidCharacterPair = function (name1, name2) {
+	if (_status.separatism) return true;
+	return isValidCharacterCombination(name1, name2);
+};
+
+function playerHasGroup(player, group) {
+	if (!player || !group) {
+		return false;
+	}
+	if (typeof player.hasIdentity === "function") {
+		return player.hasIdentity(group);
+	}
+	const identities = Array.isArray(player.group)
+		? player.group
+		: typeof player.group === "string"
+			? player.group.split("_")
+			: [];
+	return identities.includes(group);
+}
+
+const resolveGroupSkill = skill => {
+	let cur = skill;
+	const visited = new Set();
+	while (cur && !visited.has(cur)) {
+		visited.add(cur);
+		const info = lib.skill[cur];
+		
+		if (!info) {
+			break;
+		}
+		
+		// 如果当前技能身上直接写了 groupSkill，成功返回
+		if (info.groupSkill) {
+			return info.groupSkill;
+		}
+		
+		// 如果没有来源，或者来源写了自己，溯源终止
+		if (!info.sourceSkill || info.sourceSkill === cur) {
+			break;
+		}
+
+		// === 新增：严格验证溯源合法性 ===
+		const parentSkillName = info.sourceSkill;
+		const parentSkillInfo = lib.skill[parentSkillName];
+
+		// 校验 1：父技能必须在库里存在
+		// 校验 2：父技能必须配置了 group 数组
+		// 校验 3：当前技能 (cur) 必须包含在父技能的 group 数组中
+		if (!parentSkillInfo || !Array.isArray(parentSkillInfo.group) || !parentSkillInfo.group.includes(cur)) {
+			break; // 只要不满足上述任一条件，视为无效溯源，直接打断
+		}
+		// ==================================
+
+		// 验证通过，允许 cur 向上继承
+		cur = parentSkillName;
+	}
+	return null;
+};
+
 export class GameGuozhan extends Game {
 	/**
 	 * 不确定是干啥的，反正恒返回真
@@ -37,7 +97,14 @@ export class GameGuozhan extends Game {
 					return true;
 				}
 				// @ts-expect-error player 可能是 PlayerGuozhan
-				return player.isSkillEnabled(skill);
+				if (!player.isSkillEnabled(skill)) {
+					return false;
+				}
+				const group = resolveGroupSkill(skill);
+				if (group && !playerHasGroup(player, group)) {
+					return false;
+				}
+				return true;
 			});
 		}
 		

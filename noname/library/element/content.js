@@ -22,7 +22,7 @@ export const Content = {
 		event.acted.push(player);
 		var str = get.translation(trigger.player) + "濒死，是否帮助？";
 		var str2 = "当前体力：" + trigger.player.hp;
-		if (lib.config.tao_enemy && event.dying.side != player.side && lib.config.mode != "identity" && lib.config.mode != "guozhan" && !event.dying.hasSkillTag("revertsave")) {
+		if (lib.config.tao_enemy && event.dying.side != player.side && lib.config.mode != "identity" && lib.config.mode != "guozhan" && lib.config.mode != "guozhan_ee" && !event.dying.hasSkillTag("revertsave")) {
 			event._result = { bool: false };
 		} else if (player.canSave(event.dying)) {
 			player.chooseToUse({
@@ -374,7 +374,7 @@ export const Content = {
 		}
 		await next;
 		//变更角色的所属势力。如果新将是双势力，重选一下势力。 国战不因换将而重选势力
-		if (event.changeGroup !== false && get.mode() != "guozhan") {
+		if (event.changeGroup !== false && get.mode() != "guozhan" && get.mode() != "guozhan_ee") {
 			let newGroups = [];
 			if (!player.isUnseen(1)) {
 				newGroups = get.is.double(player.name1, true) || [get.character(player.name1, 1)];
@@ -3824,14 +3824,14 @@ player.removeVirtualEquip(card);
 				player.directgain(cards);
 			}
 
-			if (player.singleHp === true && get.mode() != "guozhan" && (lib.config.mode != "doudizhu" || _status.mode != "online")) {
+			if (player.singleHp === true && get.mode() != "guozhan" && get.mode() != "guozhan_ee" && (lib.config.mode != "doudizhu" || _status.mode != "online")) {
 				player.doubleDraw();
 			}
 			player._start_cards = player.getCards("h");
 			player = player.next;
 		} while (player != end);
 		event.changeCard = get.config("change_card");
-		if (_status.connectMode || (lib.config.mode == "single" && _status.mode != "wuxianhuoli") || (lib.config.mode == "doudizhu" && _status.mode == "online") || (lib.config.mode != "identity" && lib.config.mode != "guozhan" && lib.config.mode != "doudizhu" && lib.config.mode != "single")) {
+		if (_status.connectMode || (lib.config.mode == "single" && _status.mode != "wuxianhuoli") || (lib.config.mode == "doudizhu" && _status.mode == "online") || (lib.config.mode != "identity" && lib.config.mode != "guozhan" && lib.config.mode != "guozhan_ee" && lib.config.mode != "doudizhu" && lib.config.mode != "single")) {
 			event.changeCard = "disabled";
 		}
 		"step 1";
