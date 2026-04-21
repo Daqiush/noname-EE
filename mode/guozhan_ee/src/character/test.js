@@ -98,7 +98,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["twenyuan"],
 	}),
 	gz_daqiush12: new Character({
 		sex: "male",
@@ -106,7 +106,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["twenyuan"],
 	}),
 	gz_daqiush13: new Character({
 		sex: "male",
@@ -114,7 +114,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["twenyuan"],
 	}),
 	gz_daqiush14: new Character({
 		sex: "male",
@@ -122,7 +122,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["twenyuan"],
 	}),
 	gz_daqiush15: new Character({
 		sex: "male",
@@ -130,7 +130,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["twenyuan"],
 	}),
 	gz_daqiush16: new Character({
 		sex: "male",
@@ -138,7 +138,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["twenyuan"],
 	}),
 	gz_daqiush17: new Character({
 		sex: "male",
@@ -146,7 +146,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["twenyuan"],
 	}),
 	gz_daqiush18: new Character({
 		sex: "male",
@@ -154,7 +154,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["twenyuan"],
 	}),
 	gz_daqiush19: new Character({
 		sex: "male",
@@ -170,7 +170,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["zhiyu"],
 	}),
 	gz_daqiush21: new Character({
 		sex: "male",
@@ -178,7 +178,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["zhiyu"],
 	}),
 	gz_daqiush22: new Character({
 		sex: "male",
@@ -186,7 +186,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["zhiyu"],
 	}),
 	gz_daqiush23: new Character({
 		sex: "male",
@@ -194,7 +194,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["zhiyu"],
 	}),
 	gz_daqiush24: new Character({
 		sex: "male",
@@ -202,7 +202,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["zhiyu"],
 	}),
 	gz_daqiush25: new Character({
 		sex: "male",
@@ -210,7 +210,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["zhiyu"],
 	}),
 	gz_daqiush26: new Character({
 		sex: "male",
@@ -218,7 +218,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["zhiyu"],
 	}),
 	gz_daqiush27: new Character({
 		sex: "male",
@@ -226,7 +226,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["zhiyu"],
 	}),
 	gz_miyanaga_teru: new Character({
 		sex: "female",

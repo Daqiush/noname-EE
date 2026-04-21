@@ -1,4 +1,5 @@
 import { lib, game, ui, get, ai, _status } from "../../../noname.js";
+import { Character } from "../../../noname/library/element/index.js";
 import { broadcastAll } from "./patch/game.js";
 import { gamePatch } from "./patch/index.js";
 
@@ -212,30 +213,46 @@ export const start = async (event, trigger, player) => {
 			game.log("本局", `<span data-nature=${get.groupnature(group, "raw")}m>${get.translation(group)}势力</span>`, "遭到了禁用");
 			game.broadcastAll(createDialog, `group_${group}`, event.videoId);
 			for (const character in lib.character) {
-				const info = get.character(character);
+				const orig = get.character(character);
+				let majorSecondGroup = orig?.majorSecondGroup;
+				let minorSecondGroup = orig?.minorSecondGroup;
+				let charGroup = orig?.group;
+				let isUnseen = orig?.isUnseen;
+
 				// 处理主要第二势力被禁用的情况
-				if (info?.majorSecondGroup == group) {
-					info.majorSecondGroup = undefined;
+				if (majorSecondGroup == group) {
+					majorSecondGroup = undefined;
 				}
 				// 处理次要第二势力被禁用的情况
-				if (info?.minorSecondGroup == group) {
-					info.minorSecondGroup = undefined;
+				if (minorSecondGroup == group) {
+					minorSecondGroup = undefined;
 				}
 				// 如果主势力被禁用，尝试用第二势力替代
-				if (info.group == group) {
-					if (info.majorSecondGroup) {
-						info.group = info.majorSecondGroup;
-						info.majorSecondGroup = undefined;
-					} else if (info.minorSecondGroup) {
-						info.group = info.minorSecondGroup;
-						info.minorSecondGroup = undefined;
+				if (charGroup == group) {
+					if (majorSecondGroup) {
+						charGroup = majorSecondGroup;
+						majorSecondGroup = undefined;
+					} else if (minorSecondGroup) {
+						charGroup = minorSecondGroup;
+						minorSecondGroup = undefined;
 					} else {
-						info.isUnseen = true;
+						isUnseen = true;
 					}
 				}
-				game.broadcast((name, info) => {
-					lib.character[name] = info;
-				}, character, info);
+
+				// 只在有变化时才替换为新实例（避免污染 lib.characterPack 中的原始对象）
+				if (charGroup !== orig.group || majorSecondGroup !== orig.majorSecondGroup ||
+					minorSecondGroup !== orig.minorSecondGroup || isUnseen !== orig.isUnseen) {
+					const newInfo = new Character(orig);
+					newInfo.group = charGroup;
+					newInfo.majorSecondGroup = majorSecondGroup;
+					newInfo.minorSecondGroup = minorSecondGroup;
+					newInfo.isUnseen = isUnseen;
+					lib.character[character] = newInfo;
+					game.broadcast((name, info) => {
+						lib.character[name] = info;
+					}, character, newInfo);
+				}
 			}
 			await game.delay(5);
 			game.broadcastAll("closeDialog", event.videoId);
@@ -325,6 +342,10 @@ export const startBefore = () => {
 		if (!player || !group) {
 			return false;
 		}
+		// "ye" groupSkill matches any 野心家 (pure "ye" or compound "x_ye")
+		if (group === "ye" && typeof player.isYe === "function") {
+			return player.isYe();
+		}
 		if (typeof player.hasIdentity === "function") {
 			return player.hasIdentity(group);
 		}
@@ -412,6 +433,13 @@ export const startBefore = () => {
 				}
 			}
 		}
+		// 变更得来的新武将技能，在当前结算结束前无效
+		const newCharDisabled = player.storage?.newCharSkillsDisabled;
+		if (newCharDisabled) {
+			for (const d of newCharDisabled) {
+				if (skill === d || skill.startsWith(d + '_')) return false;
+			}
+		}
 		return _originalFilterTrigger.call(this, event, player, triggername, skill, indexedData);
 	};
 
@@ -456,6 +484,15 @@ export const startBefore = () => {
 export const onreinit = () => {
 	// @ts-expect-error 祖宗之法就是这么写的
 	const pack = lib.characterPack.mode_guozhan_ee;
+
+	// 同时重置测试包中的角色，防止 banGroup 对这些角色的替换实例跨局持续存在
+	// @ts-expect-error 祖宗之法就是这么写的
+	const testPack = lib.characterPack.mode_guozhan_ee_test;
+	if (testPack) {
+		for (const character in testPack) {
+			lib.character[character] = testPack[character];
+		}
+	}
 
 	for (const character in pack) {
 		lib.character[character] = pack[character];

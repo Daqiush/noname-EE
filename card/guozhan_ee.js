@@ -437,7 +437,7 @@ game.import("card", function () {
 				mode: ["guozhan_ee"],
 				//global:['g_chiling_ee1','g_chiling_ee2','g_chiling_ee3'],
 				filterTarget(card, player, target) {
-					return target.isUnseen();
+					return target.isUndetermined();
 				},
 				selectTarget: -1,
 				chooseai(event, player) {
@@ -465,7 +465,7 @@ game.import("card", function () {
 				content() {
 					"step 0";
 					var choiceList = ["明置一张武将牌，然后摸一张牌", "失去1点体力"];
-					event.nomingzhi = target.hasSkillTag("nomingzhi", false, null, true);
+					event.nomingzhi = target.hasSkillTag("nomingzhi", false, null, true) || !target.isUnseen(2);
 					if (event.nomingzhi) {
 						choiceList.shift();
 					}
@@ -479,9 +479,16 @@ game.import("card", function () {
 						index++;
 					}
 					if (index == 0) {
+						var controls = [];
+						if (target.isUnseen(0)) {
+							controls.push("主将");
+						}
+						if (target.isUnseen(1)) {
+							controls.push("副将");
+						}
 						target
-							.chooseControl("主将", "副将", function () {
-								return Math.floor(Math.random() * 2);
+							.chooseControl(controls, function () {
+								return Math.floor(Math.random() * controls.length);
 							})
 							.set("prompt", "选择要明置的武将牌");
 					} else if (index == 1) {
@@ -492,9 +499,9 @@ game.import("card", function () {
 						event.finish();
 					}
 					"step 2";
-					if (result.index == 0) {
+					if (result.control == "主将") {
 						target.showCharacter(0);
-					} else {
+					} else if (result.control == "副将") {
 						target.showCharacter(1);
 					}
 					target.draw();
@@ -539,7 +546,7 @@ game.import("card", function () {
 				audio: true,
 				type: "trick",
 				enable: true,
-				global: "g_diaohulishan_ee",
+				global: ["g_diaohulishan_ee", "g_diaohulishan_ee_after"],
 				filterTarget(card, player, target) {
 					return target != player;
 				},
@@ -1103,7 +1110,36 @@ game.import("card", function () {
 					event.goto(1);
 				},
 			},
-			g_diaohulishan_ee: {},
+			g_diaohulishan_ee: {
+				// Fires at useCard with firstDo so it runs before any skill can add targets.
+				// Records whether the player initially targeted exactly one player.
+				trigger: { global: "useCard2" },
+				forced: true,
+				popup: false,
+				firstDo: true,
+				filter(event) {
+					return event.card?.name === "diaohulishan_ee" && !event._diaohulishan_counted;
+				},
+				content() {
+					trigger._diaohulishan_counted = true;
+					trigger._diaohulishan_single = trigger.targets?.length === 1;
+				},
+			},
+			g_diaohulishan_ee_after: {
+				// Fires at useCardAfter with lastDo so it runs after all effects resolve.
+				// Draws a card for the user if the card was initially played on one target.
+				trigger: { global: "useCardAfter" },
+				forced: true,
+				popup: false,
+				lastDo: true,
+				filter(event) {
+					return event._diaohulishan_single === true && !event._diaohulishan_drawn;
+				},
+				content() {
+					trigger._diaohulishan_drawn = true;
+					trigger.player.draw();
+				},
+			},
 			diaohulishan_ee: {
 				charlotte: true,
 				group: "undist",

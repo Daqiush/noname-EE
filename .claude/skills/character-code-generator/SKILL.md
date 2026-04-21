@@ -58,7 +58,7 @@ compatibility:
     - 标点符号
     - 全角/半角符号
     - HTML 标记（如 `<b>...</b>`）
-    - 换行（如 `\n`）
+    - 换行（技能描述中用 `<br>` 而非 `\n` 表示换行）
     - 序号与分隔符（如 `1.`、`2.`、`；`、`->`）
 - 若原文存在歧义或疑似笔误，不得自行修正；应先询问用户是否按原文保留。
 - “100%复制”仅约束 `*_info` 描述文本，不限制技能实现代码写法。
@@ -244,7 +244,8 @@ skill_id: {
     - `event.type === "discard"`
     - `(event.discarder || event.getParent(2)?.player) === event.player`
 - 明确禁止仅使用 `event.player == event.getParent()?.player` 判定“自己弃置”，该写法会在部分链路误判为可触发
-- 当技能描述中包含“x势力技”时（如“蜀势力技”、“群雄势力技”），必须在技能实现代码的首层添加 `groupSkill: "x"` 属性（其中x为对应势力代码，如 `shu`、`qun` 等）。
+- 当技能描述中包含”x势力技”时（如”蜀势力技”、”群雄势力技”），必须在技能实现代码的首层添加 `groupSkill: “x”` 属性（其中x为对应势力代码，如 `shu`、`qun` 等）。
+- **`groupSkill` 判定逻辑双文件约束**：`playerHasGroup` 函数在 `mode/guozhan_ee/src/main.js`（管 `lib.filter.filterTrigger`）和 `mode/guozhan_ee/src/patch/game.js`（管 `game.filterSkills`）中各有一份独立实现。若需修改 `groupSkill` 的判定行为（如新增势力别名、支持复合身份），必须同步修改这两个文件，否则修改只对其中一条路径生效。
 - 当描述仅为“当你需要使用X时”，必须使用 `enable: "chooseToUse"`（或等价实现），禁止混入 `chooseToRespond`。
 - 当描述仅为“当你需要打出X时”，必须使用 `enable: "chooseToRespond"`（或等价实现），禁止混入 `chooseToUse`。
 - 当描述明确同时包含“需要使用/打出”两类时机时，才允许使用 `enable: ["chooseToUse", "chooseToRespond"]`。
@@ -256,6 +257,11 @@ skill_id: {
 - 对上述两段式语义，生成代码前必须在仓库中检索同类实现再落地（优先检索关键词：`然后视为使用`、`chooseUseTarget`、`useCard`），不得凭空套用“当作使用”模板。
 - 语义词”同势力/相同势力角色”默认包含自己；仅当描述明确写”其他角色/除你外”时才排除自己，禁止无依据添加 `event.player == player` 过滤
 - 严禁臆造”引擎内置函数/字段”；实现前必须先检索并确认 API 在代码库中存在，优先复用现有引擎接口。
+- **`canMoveCard` 参数语义**：`player.canMoveCard()` 无参数时用于规则判断（是否允许发动）；`player.canMoveCard(true)` 的 `true` 参数仅供 AI 判断是否应该发动，不代表规则上可以发动。在技能 `filter` / `check` / 规则判断中只能用无参版本，禁止传 `true`。
+- **`chooseToCompare` 多目标拼点**：当多名角色需要"同时"与同一敌方角色拼点时，正确写法是 `enemy.chooseToCompare(competitorsArray).callback = lib.skill.skillId.callback`，由引擎原生处理多目标拼点，**禁止**用 `compareIdx` 逐一循环 `competitor.chooseToCompare(enemy)`。callback 定义在技能对象顶层，其上下文中 `event.player` 为调用方（敌人），`event.target` 为一名竞选者，`event.winner` 为赢的一方。
+- **引擎 API 新知识落盘规则**：在实现或调试过程中，若发现引擎 API 的参数语义、适用范围或潜在误用（如参数含义与直觉不符、两个相近函数的区别），应自行判断是否属于未来生成代码时容易踩坑的知识；若是，则主动将该规则添加到本文件的”执行约束”节，无需等用户提示。
+- **`chooseCard` 强制参数禁止乱写**：`player.chooseCard` 的第二个参数若为 `true` 表示强制选择（玩家必须选），若为描述字符串则表示可选。技能描述中”你可以...”对应可选（传描述字符串），描述中无”可以”的强制效果才传 `true`。不确定时照抄同类技能模板，禁止猜测。
+- **`async cost` + `async content` 的结果读取**：`cost` 中通过 `event.result = await player.chooseCard(...).forResult()` 存储结果后，`content` 中必须用 `event.cards`（引擎在 cost 结束后自动将 `event.result.cards` 提升到 `event.cards`），严禁在 `content` 中写 `event.result.cards`（该字段在 content 阶段已被清空）。不确定写法时，必须先在仓库中检索同类 `async cost` + `async content` 模板再落地。
 
 ## 联机模式序列化约束
 

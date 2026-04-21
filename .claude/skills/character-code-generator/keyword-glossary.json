@@ -44,11 +44,25 @@
 			"history": []
 		},
 		{
-			"term": "置入弃牌堆",
-			"meaning": "语义上不是“弃置”，实现应优先使用 loseToDiscardpile 而非 discard/chooseToDiscard。",
-			"source": "skills/pokemon.txt 备注5",
-			"aliases": ["放入弃牌堆", "不是弃置"],
-			"history": []
+			“term”: “置入弃牌堆”,
+			“meaning”: “语义上不是”弃置”，实现应优先使用 loseToDiscardpile 而非 discard/chooseToDiscard。”,
+			“source”: “skills/pokemon.txt 备注5”,
+			“aliases”: [“放入弃牌堆”, “不是弃置”],
+			“history”: []
+		},
+		{
+			“term”: “状态技”,
+			“meaning”: “即锁定技，标注出来只是为了强调它不是触发类技能。实现时等同于 locked: true。”,
+			“source”: “skills/vibe.txt 备注1”,
+			“aliases”: [“锁定技（非触发）”],
+			“history”: []
+		},
+		{
+			“term”: “其他角色”,
+			“meaning”: “指除你以外的角色，不受上下文中提到的角色限制。实现时筛选条件为 current !== player，与先前提及的角色无关。”,
+			“source”: “skills/vibe.txt 备注2”,
+			“aliases”: [“除你以外”, “其他所有角色”],
+			“history”: []
 		}
 	]
 }

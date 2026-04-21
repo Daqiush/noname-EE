@@ -6,6 +6,7 @@ export default {
 	"#pokemon_weiyang": "红桃入局，福运未央。",
 	"#pokemon_tanwei": "阴阳互转，微处见机。",
 	"#pokemon_xingjian": "顺势而行，愈进愈健。",
+	"#pokemon_xinya": "兵临城下，唯我独行。",
 	"#gz_pokemon_guoranweng:die": "早已预料……果然如此……",
 	"#pokemon_fengjing": "以静制动，料敌于先。",
 	"#pokemon_mihu": "守势已布，变数皆除。",

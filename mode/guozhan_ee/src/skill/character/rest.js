@@ -792,7 +792,7 @@ export default {
 			if (player.isUnseen()) {
 				return target.isUnseen();
 			}
-			return !target.isFriendOf(player);
+			return target.isEnemyOf(player);
 		},
 		check(card) {
 			if (card.name == "tao") {
@@ -808,7 +808,7 @@ export default {
 			"step 0";
 			player.give(cards, target);
 			"step 1";
-			if (!target.isUnseen()) {
+			if (!target.isUnseen() && !target.isFriendOf(player)) {
 				player.draw(cards.length);
 			}
 		},
@@ -857,7 +857,54 @@ export default {
 			},
 		},
 	},			
-	_changeSkin: {
+	_eveChangeSkin: {
+		trigger: { player: "onRecalculateIdentity" },
+		forced: true,
+		filter(event, player) {
+			if (get.mode() == "guozhan_ee") {
+				return true;
+			}
+			return false;
+		},
+		content() {
+			const skinMap = {
+				han: "gz_pokemon_yibu_zhili",
+				qun: "gz_pokemon_yibu_rixin",
+				wei: "gz_pokemon_yibu_weiyang",
+				shu: "gz_pokemon_yibu_tanwei",
+				wu: "gz_pokemon_yibu_xingjian",
+				ye: "gz_pokemon_yibu_xinya",
+				original: "gz_pokemon_yibu",
+				};
+			if (player.name1 != "gz_pokemon_yibu" && player.name2 != "gz_pokemon_yibu") {
+				return;
+			}
+			const groupOrder = ["han", "qun", "wei", "shu", "wu"];
+			//判断玩家的group是否是野心家，例如1_ye，2_ye，3_ye等。把1_ye至12_ye构造一个数组，判断玩家的group是否在这个数组里。
+			const yeGroups = [];
+			for (let i = 1; i <= 12; i++) {
+				yeGroups.push(`${i}_ye`);
+			}
+			const isYe = yeGroups.some(group => player.hasIdentity(group));
+			const group = groupOrder.find(name => player.hasIdentity(name)) ?? (isYe ? "ye" : "original");
+			console.log("current group is", group);
+			const skin = skinMap[group];
+			console.log("changing skin to", skin);
+			if (!skin || player.storage.pokemon_daifa_current_skin == skin) {
+				return;
+			}
+			if (player.name1 == "gz_pokemon_yibu" && player.node.avatar) {
+				player.node.avatar.setBackground(skin, "character");
+				player.node.avatar.show();
+			}
+			if (player.name2 == "gz_pokemon_yibu" && player.node.avatar2) {
+				player.node.avatar2.setBackground(skin, "character");
+				player.node.avatar2.show();
+			}
+			player.storage.pokemon_daifa_current_skin = skin;
+		},
+	},
+	_zgl_get_chiling_ee: {
 		trigger: { player: "phaseBegin" },
 		forced: true,
 		filter(event, player) {
@@ -867,48 +914,25 @@ export default {
 			return false;
 		},
 		content() {
-			console.log("initializing skin map");
-			const skinMap = {
-				han: "gz_pokemon_yibu_zhili",
-				qun: "gz_pokemon_yibu_rixin",
-				wei: "gz_pokemon_yibu_weiyang",
-				shu: "gz_pokemon_yibu_tanwei",
-				wu: "gz_pokemon_yibu_xingjian",
-				ye: "gz_pokemon_yibu_weixian",
-				original: "gz_pokemon_yibu",
-				};
-			for (const player of game.players) {
-				console.log("checking player", player.id, player.name1, player.name2);
-				if (player.name1 != "gz_pokemon_yibu" && player.name2 != "gz_pokemon_yibu") {
-					return;
-				}
-				const groupOrder = ["han", "qun", "wei", "shu", "wu"];
-				//判断玩家的group是否是野心家，例如1_ye，2_ye，3_ye等。把1_ye至12_ye构造一个数组，判断玩家的group是否在这个数组里。
-				const yeGroups = [];
-				for (let i = 1; i <= 12; i++) {
-					yeGroups.push(`${i}_ye`);
-				}
-				const isYe = yeGroups.some(group => player.hasIdentity(group));
-				const group = groupOrder.find(name => player.hasIdentity(name)) ?? (isYe ? "ye" : "original");
-				console.log("current group is", group);
-				const skin = skinMap[group];
-				console.log("changing skin to", skin);
-				if (!skin || player.storage.pokemon_daifa_current_skin == skin) {
-					return;
-				}
-				if (player.name1 == "gz_pokemon_yibu" && player.node.avatar) {
-					player.node.avatar.setBackground(skin, "character");
-					player.node.avatar.show();
-				}
-				if (player.name2 == "gz_pokemon_yibu" && player.node.avatar2) {
-					player.node.avatar2.setBackground(skin, "character");
-					player.node.avatar2.show();
-				}
-				player.storage.pokemon_daifa_current_skin = skin;
+			if (player.name1 != "gz_vibe_zhugeliang" && player.name2 != "gz_vibe_zhugeliang") {
+				return;
 			}
-		},
+			var cards = [];
+			var card = get.cardPile2(function (card) {
+				return card.name == "chiling_ee";
+			});
+			if (card) {
+				cards.push(card);
+			}
+			if (cards.length) {
+				player.gain(cards, "gain2");
+				for (var card of cards) {
+					player.chooseUseTarget(card, true, "nopopup");
+				}
+			}
+		}
 	},
-	
+
 	/*----分界线----*/
 	/*
 	 * ==================== 技能使能位机制使用说明 ====================

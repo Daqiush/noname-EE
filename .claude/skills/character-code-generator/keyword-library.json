@@ -437,6 +437,114 @@
 				"choosePlayerCard 的 AI 函数参数是 button，牌对象通过 button.link 获取。",
 				"chooseBool 的 AI 若需引用 trigger.player，用 .set('_key', trigger.player) + get.event('_key') 避免联机序列化问题。"
 			]
+		},
+		{
+			"patternId": "phase_end_put_card_on_pile_then_virtual_binglin",
+			"intent": "结束阶段将手牌置于牌堆顶，然后视为使用【兵临城下】，若未造成伤害则失去体力",
+			"keywords": ["结束阶段", "置于牌堆顶", "视为使用", "兵临城下", "binglinchengxiax", "若未造成过伤害", "失去1点体力", "phaseJieshuBegin"],
+			"descriptionPatterns": [
+				"结束阶段，你可将一张手牌置于牌堆顶，然后视为使用一张【兵临城下】，此牌结算结束后，若未造成过伤害，你失去1点体力。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "jsrgxiezheng",
+					"name": "挟政",
+					"translationFile": "character/jsrg/translate.js",
+					"skillFile": "character/jsrg/skill.js",
+					"note": "结束阶段令目标置牌堆顶再虚拟使用兵临城下的完整模板；伤害检测用 getParent(card.name)?.card?.标记 判断是否为本次兵临城下造成。"
+				},
+				{
+					"skillId": "pokemon_xinya",
+					"name": "新雅",
+					"translationFile": "mode/guozhan_ee/src/translate/skill/character/pokemon.js",
+					"skillFile": "mode/guozhan_ee/src/skill/character/pokemon.js",
+					"note": "自己置牌堆顶的简化版本（无目标选择），野心家势力技，groupSkill: 'ye'。"
+				}
+			],
+			"implementationHints": [
+				"trigger: { player: 'phaseJieshuBegin' }，filter 检查 player.countCards('h') > 0。",
+				"cost 用 chooseCard('h', true, ...) 选一张手牌，result 存入 event.result；content 中用 event.result.cards 取牌。",
+				"置顶：player.lose(cards, ui.cardPile, 'insert') + game.updateRoundNumber()。",
+				"虚拟使用：const card = { name: 'binglinchengxiax', isCard: true, xinya: true }; if (player.hasUseTarget(card)) await player.chooseUseTarget(card, true)。",
+				"伤害检测：!game.hasPlayer2(current => current.hasHistory('damage', evt => evt.getParent(card.name)?.card?.xinya))，若成立则 player.loseHp()。",
+				"需添加 groupSkill: 'ye' 表示野心家势力技。"
+			]
+		},
+		{
+			"patternId": "damage_after_change_main_draw_on_faction_change",
+			"intent": "受到伤害后变更主将，若势力因此改变则摸X张牌（X为此前同势力角色数）",
+			"keywords": ["受到伤害后", "变更主将", "势力改变", "摸X张牌", "相同势力角色数", "damageEnd", "changeMain", "identity"],
+			"descriptionPatterns": [
+				"当你受到伤害后，你可变更主将，然后若你的势力因此变化，你摸X张牌（X为此前相同势力角色数）。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "vibe_mengda_hubian",
+					"name": "狐变",
+					"translationFile": "mode/guozhan_ee/src/translate/skill/character/vibe.js",
+					"skillFile": "mode/guozhan_ee/src/skill/character/vibe.js",
+					"note": "step-based content：step0记录oldIdentity与friendCount，调用player.changeMain(false)；step1对比identity判断是否变化，若变则draw(friendCount)。"
+				}
+			],
+			"implementationHints": [
+				"trigger: { player: 'damageEnd' }，filter 直接返回 true（可选发动）。",
+				"变更主将调用 player.changeMain(false)，引擎会暂停等待事件完成后再进入下一步。",
+				"步骤分两步：step0 记录 player.identity 和友方数，再调用 changeMain；step1 对比是否与记录值不同，不同则 player.draw(count)。",
+				"同势力角色数排除自己：game.filterPlayer(current => current !== player && current.isFriendOf(player)).length。"
+			]
+		},
+		{
+			"patternId": "use_sha_target_replaced_by_friends_vote",
+			"intent": "使用杀时清空目标，由所有其他友方角色依次秘密投票，票数最多的成为目标",
+			"keywords": ["使用杀", "目标", "投票", "友方角色", "秘密选择", "票数最多", "useCardBegin", "chooseTarget", "voteIdx"],
+			"descriptionPatterns": [
+				"蜀势力技，锁定技，你使用【杀】的目标改为由所有其他友方角色投票决定。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "vibe_mengda_chenzhong",
+					"name": "陈忠",
+					"translationFile": "mode/guozhan_ee/src/translate/skill/character/vibe.js",
+					"skillFile": "mode/guozhan_ee/src/skill/character/vibe.js",
+					"note": "trigger: player useCardBegin，forced: true；step0清空trigger.targets并建立voters数组；step1-2循环voter秘密chooseTarget；step3统计票数写回trigger.targets。"
+				}
+			],
+			"implementationHints": [
+				"trigger: { player: 'useCardBegin' }，filter 检查 event.card.name === 'sha'。",
+				"locked: true + forced: true 使技能为锁定强制触发，不弹选择框。",
+				"清空目标：trigger.targets.length = 0。",
+				"投票循环：event.voters 数组 + event.voteIdx 计数器 + event.goto(1) 循环回step1。",
+				"voter的 chooseTarget filter 内用 trigger.player.canUse(trigger.card, target) 校验合法目标。",
+				"票数统计：countMap[t.playerid] 计票，取 maxCount 后筛出 winners，写入 trigger.targets.addArray(winners)。"
+			]
+		},
+		{
+			"patternId": "friends_vote_pick_competitors_then_compare_with_enemy",
+			"intent": "友方投票选出多名竞选者，技能发动者选一名敌人，竞选者同时与敌人拼点，赢的视为对输的使用杀",
+			"keywords": ["友方投票", "拼点", "赢的角色", "视为使用杀", "phaseUseBegin", "chooseToCompare", "callback"],
+			"descriptionPatterns": [
+				"魏势力技，锁定技，出牌阶段开始时，你令所有其他友方角色投票选出友方角色，所有得票最多的角色同时与你选择的另一名角色拼点，赢的角色视为对没赢的角色使用一张【杀】。"
+			],
+			"referenceSkills": [
+				{
+					"skillId": "vibe_mengda_liangfan",
+					"name": "量反",
+					"translationFile": "mode/guozhan_ee/src/translate/skill/character/vibe.js",
+					"skillFile": "mode/guozhan_ee/src/skill/character/vibe.js",
+					"note": "step-based：step0-2友方投票循环；step3统计竞选者并选敌人；step4读取敌人；step5发起拼点。所有竞选者同时拼点用 enemy.chooseToCompare(competitors)，结果通过 .callback 处理。"
+				}
+			],
+			"implementationHints": [
+				"trigger: { player: 'phaseUseBegin' }，locked: true，forced: true。",
+				"filter 检查有友方角色（current !== player && current.isFriendOf(player)）。",
+				"投票循环与陈忠相同：event.friends + voteIdx + goto(1) 循环，统计 countMap 取 maxCount 竞选者写入 event.competitors。",
+				"✅ 多名竞选者同时拼点正确写法：event.enemy.chooseToCompare(event.competitors).callback = lib.skill.skillId.callback",
+				"❌ 错误写法：不要用 compareIdx 逐一循环 competitor.chooseToCompare(enemy)，引擎有原生多目标拼点支持。",
+				"callback 在技能对象顶层定义：callback(){ if(event.winner===event.player){...} else if(event.winner===event.target){...} }",
+				"callback 上下文：event.player = 调用chooseToCompare的角色（敌人），event.target = 一名竞选者，event.winner = 赢的一方。",
+				"视为使用杀：winner.useCard({ name: 'sha', isCard: true }, loser, false).set('skill', skillId)。",
+				"chooseTarget filter 内访问技能发动者：_status.event.getParent().player。"
+			]
 		}
 	]
 }

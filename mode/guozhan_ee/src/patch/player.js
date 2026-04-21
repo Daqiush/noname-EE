@@ -29,7 +29,7 @@ export class PlayerGuozhan extends Player {
 	 * @returns {boolean}
 	 */
 	isYe() {
-		return isYeIdentity(this.identity);
+		return this.getIdentities().some(id => isYeIdentity(id));
 	}
 
 	/**
@@ -283,7 +283,7 @@ export class PlayerGuozhan extends Player {
 		}
 
 		// 完全野心家（identity 为 "x_ye" 格式或 "ye"）
-		if (this.isYe()) {
+		if (isYeIdentity(this.identity)) {
 			if (!this.getStorage("yexinjia_friend").length) {
 				// 单独野心家，返回带座次的野心家标识
 				return [this.identity];
@@ -304,14 +304,10 @@ export class PlayerGuozhan extends Player {
 				// 汉朝副将只属于汉势力
 				return ["han"];
 			} else if (this._viceSecondGroup === "ye") {
-				// 有部分势力变成野心家
-				if (this._validGroup) {
-					// 第一势力超标，返回有效的第二势力
-					return [this._validGroup];
-				} else {
-					// 第二势力超标，返回有效的第一势力
-					return [viceGroup];
-				}
+				// 有部分势力变成野心家：同时返回有效势力和野心家身份
+				// 这样 isEnemyOf 可正确处理非对称关系（对方单势力时会认为我是敌方）
+				const validGroup = this._validGroup || viceGroup;
+				return [validGroup, this.getYeIdentity()];
 			} else if (this._viceSecondGroup) {
 				// 正常双势力
 				return [viceGroup, this._viceSecondGroup];
@@ -380,7 +376,11 @@ export class PlayerGuozhan extends Player {
 	 * - 例如：主将蜀副将汉，因蜀满员成为野心家后，暗置主将变成汉朝，此时野心家标记被清除
 	 * - 再次明置主将时，重新判断蜀国是否满员
 	 */
-	recalculateIdentity() {
+	/**
+	 * 同步计算并立即应用势力状态，不创建游戏事件。
+	 * 仅供 recalculateIdentity 和必须同步执行的内部调用使用。
+	 */
+	_performIdentityRecalculation() {
 		const mainUnseen = this.isUnseen(0);
 		const viceUnseen = this.isUnseen(1);
 		
@@ -587,6 +587,26 @@ export class PlayerGuozhan extends Player {
 	}
 
 	/**
+	 * 重新计算势力，并创建 onRecalculateIdentity 底层事件供技能触发。
+	 *
+	 * 计算本身同步完成，之后创建并返回事件对象（已入队）。
+	 * 调用者可选择 await 等待技能响应完毕，也可不 await（事件异步排队执行）。
+	 *
+	 * @returns { import("../../../../noname/library/element/gameEvent.js").GameEvent }
+	 */
+	recalculateIdentity() {
+		const ex_identity = this.identity;
+		const ex_group = this.group;
+		this._performIdentityRecalculation();
+		const next = game.createEvent("onRecalculateIdentity");
+		next.player = this;
+		next.ex_identity = ex_identity;
+		next.ex_group = ex_group;
+		next.setContent("onRecalculateIdentity");
+		return next;
+	}
+
+	/**
 	 * 判断是否为友方（基于势力集合交集）
 	 * 
 	 * 两个角色的势力集合存在交集时即为友方。
@@ -648,7 +668,7 @@ export class PlayerGuozhan extends Player {
 	}
 
 	/**
-	 * 判断是否为敌方（非对称函数）
+	 * 判断是否为敌方（非对称函数），B与A势力不同意味着A.isEnemyOf(B)为true
 	 * 
 	 * 当且仅当 this 和 target 均有势力，且不满足"target 势力唯一，且 this 也有这个势力"。
 	 * 
@@ -678,9 +698,9 @@ export class PlayerGuozhan extends Player {
 			return false;
 		}
 		
-		// 判断条件："target 势力唯一，且 this 也有这个势力"
+		// 判断条件："this 势力唯一，且 target 也有这个势力"
 		// 如果满足，则不是敌方；否则是敌方
-		if (targetIdentities.length === 1 && myIdentities.includes(targetIdentities[0])) {
+		if (myIdentities.length === 1 && targetIdentities.includes(myIdentities[0])) {
 			return false;
 		}
 		
@@ -1002,9 +1022,7 @@ export class PlayerGuozhan extends Player {
 			source.discard(source.getCards("he"));
 			delete source.shijun;
 		} else if (source && source.identity != "unknown") {
-			if (isYeIdentity(source.identity) && !source.getStorage("yexinjia_friend").length) {
-				source.draw(3);
-			} else if (source.shijun2) {
+			if (source.shijun2) {
 				delete source.shijun2;
 				source.draw(
 					1 +
@@ -1015,11 +1033,13 @@ export class PlayerGuozhan extends Player {
 			} else if (isYeIdentity(that.identity)) {
 				if (that.getStorage("yexinjia_friend").includes(source) || source.getStorage("yexinjia_friend").includes(that)) {
 					source.discard(source.getCards("he"));
+				} else if (source.isYe() && !source.getStorage("yexinjia_friend").length) {
+					// 野心家击杀野心家（互为敌人），固定摸3张
+					source.draw(3);
 				} else {
 					source.draw(
 						1 +
 							game.countPlayer(function (current) {
-								// @ts-expect-error 类型就是这么写的
 								if (current == that) {
 									return false;
 								}
@@ -1033,12 +1053,15 @@ export class PlayerGuozhan extends Player {
 							})
 					);
 				}
-			} else if (!source.hasCommonIdentity(that)) {
-				// 不同势力（使用势力集合判断，支持双势力副将）
-				source.draw(get.population(that.identity) + 1);
-			} else {
-				// 同势力
+			} else if (source.hasCommonIdentity(that)) {
+				// 同势力（含半野心家击杀友方的情形）
 				source.discard(source.getCards("he"));
+			} else if (source.isYe() && !source.getStorage("yexinjia_friend").length) {
+				// 纯野心家或半野心家击杀敌方，固定摸3张
+				source.draw(3);
+			} else {
+				// 普通异势力击杀
+				source.draw(get.population(that.identity) + 1);
 			}
 		}
 	}
@@ -1047,7 +1070,7 @@ export class PlayerGuozhan extends Player {
 		if (get.is.jun(this.name1)) {
 			if (source && source.identity == this.identity) {
 				source.shijun = true;
-			} else if (source && !isYeIdentity(source.identity)) {
+			} else if (source && !source.isYe()) {
 				source.shijun2 = true;
 			}
 			var yelist = [];
@@ -1609,6 +1632,7 @@ export class PlayerGuozhan extends Player {
 		}
 		// @ts-expect-error 类型就是这么写的
 		if (_status.yeidentity && _status.yeidentity.includes(group)) {
+			console.log(`[wontYe] ${group} 势力已被 yeidentity 封锁（君主阵亡），无法加入`);
 			return false;
 		}
 		if (get.zhu(this, null, group)) {

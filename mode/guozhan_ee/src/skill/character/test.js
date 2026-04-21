@@ -170,13 +170,29 @@ export default {
 		},
 		content() {
 			"step 0";
+			// 仅排队替换事件，不在此步骤调用 showCharacter
+			// showCharacter 会同步执行 $showCharacter（移除 unseen2 class），若在本步骤调用
+			// 会导致 replaceCharacter 事件执行时 recalculateIdentity 看到错误的明置状态
 			player.getNext().replaceCharacter(1, "gz_daqiush1", false);
-			if (player.getNext().isUnseen(1))
-				player.getNext().showCharacter(1);
 			player.getNext().getNext().replaceCharacter(1, "gz_daqiush11", false);
-			if (player.getNext().getNext().isUnseen(1))
-				player.getNext().getNext().showCharacter(1);
 			"step 1";
+			// replaceCharacter 事件已完成，现在再亮将（此时 name2 已正确更新）
+			// showCharacter 会同步执行 $showCharacter（移除 unseen2 class），
+			// 所以紧随其后调用 recalculateIdentity 时可以看到正确的明置状态
+			{
+				var t1 = player.getNext(), t2 = player.getNext().getNext();
+				if (t1.isUnseen(1)) {
+					t1.showCharacter(1);
+					// @ts-ignore
+					if (typeof t1.recalculateIdentity === "function") t1.recalculateIdentity();
+				}
+				if (t2.isUnseen(1)) {
+					t2.showCharacter(1);
+					// @ts-ignore
+					if (typeof t2.recalculateIdentity === "function") t2.recalculateIdentity();
+				}
+			}
+			"step 2";
 			var cards = [];
 			var card = get.cardPile2(function (card) {
 				return card.name == "chuanguoyuxi_ee";

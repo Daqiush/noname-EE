@@ -4034,7 +4034,7 @@ game.import("card", function () {
 							return true;
 						}
 						for (var i = 0; i < event.targets.length; i++) {
-							if (target.identity === event.targets[i].identity) {
+							if (target.isFriendOf(event.targets[i])) {
 								return false;
 							}
 						}

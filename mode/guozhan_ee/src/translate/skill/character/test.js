@@ -30,7 +30,7 @@ export default {
 	gz_daqiush_disable_passive_info: "出牌阶段，你可以失能技能“受控（被）”。",
 
 	miyanaga_teru_yueyong: "月涌",
-	miyanaga_teru_yueyong_info: "使能，明置技，将你的副将替换为天江衣。每个回合开始时，你失能此技能，秘密指定一个花色X，并断言本回合第一张由其他角色使用且有花色的牌的花色为此花色。</br>成功：使能【月冷】。本回合结束时，从弃牌堆中获得此牌。</br>失败：使能【月涌】。",
+	miyanaga_teru_yueyong_info: "使能，锁定技。战吼，将你的副将替换为天江衣。每个回合开始时，你失能此技能，秘密指定一个花色X，并断言本回合第一张由其他角色使用且有花色的牌的花色为此花色。</br>成功：使能【月冷】。本回合结束时，从弃牌堆中获得此牌。</br>失败：使能【月涌】。",
 	miyanaga_teru_yueleng: "月冷",
 	miyanaga_teru_yueleng_info: "1",
 	miyanaga_teru_yueqing: "月清",

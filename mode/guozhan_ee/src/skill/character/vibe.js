@@ -1,3 +1,4 @@
+import { getTypeOf } from "jszip/lib/deprecatedPublicUtils.js";
 import { lib, game, ui, get as _get, ai, _status}  from "../../../../../noname.js";
 import { cast } from "../../../../../noname/util/index.js";
 import { GetGuozhan } from "../../patch/get.js";
@@ -9,7 +10,7 @@ const get = cast(_get);
 
 /** @type {Record<string, Skill>} */
 export default {
-	// 诸葛亮：类火攻结算，可选择修改规则
+	// 诸葛亮：对火攻结算，可选择修改规则
 	vibe_zgl_huoji: {
 		audio: 2,
 		onremove(player, skill) {
@@ -51,6 +52,7 @@ export default {
 				player.storage.vibe_zgl_huoji_record = {};
 			}
 			player.storage.vibe_zgl_huoji_record[id] = event.mode;
+			player.chat(result.control);
 			console.log("[vibe_zgl_huoji] record", player.playerid, id, event.mode);
 		},
 		huogongContentShow() {
@@ -659,7 +661,7 @@ export default {
 			if (!event.player.isFriendOf(player)) {
 				return false;
 			}
-			if (!event.source.isFriendOf(event.player)) {
+			if (!event.source.isFriendOf(player)) {
 				return false;
 			}
 			return true;
@@ -705,7 +707,6 @@ export default {
 
 	vibe_bianfuren_yuejian: {
 		trigger: { global: "loseAfter" },
-		direct: true,
 		filter(event, player) {
 			if (player.hasSkill("vibe_bianfuren_yuejian_used")) {
 				return false;
@@ -723,14 +724,29 @@ export default {
 			var cards = (event.cards2 || []).filter(card => get.position(card, true) == "d");
 			return cards.length > 0;
 		},
-		content() {
-			"step 0";
-			player.addTempSkill("vibe_bianfuren_yuejian_used", { global: "phaseAfter" });
+		async cost(event, trigger, player) {
 			event.cards = (trigger.cards2 || []).filter(card => get.position(card, true) == "d");
-			trigger.player.chooseButton(["约俭：选择一张弃置牌获得之", event.cards], true);
-			"step 1";
+			const next = (await player.chooseBool(get.prompt("vibe_bianfuren_yuejian"), "是否发动【约俭】？").forResult())["bool"];
+			if (next) {
+				const result = await trigger.player.chooseButton(["约俭：选择一张弃置牌获得之", event.cards], true).forResult();
+				event.result = {
+					bool: true,
+					cost_data: result,
+				};
+			console.log(result);
+			}
+			else {
+				event.result = {
+					bool: false,
+				};
+			}	
+		},
+		async content(event, trigger, player) {
+			const result = event.cost_data;
+			console.log(result);
 			if (result.bool && result.links && result.links.length) {
-				trigger.player.gain(result.links, "gain2");
+				await trigger.player.gain(result.links, "gain2");
+				player.addTempSkill("vibe_bianfuren_yuejian_used", { global: "phaseAfter" });
 			}
 		},
 		subSkill: {
@@ -784,6 +800,9 @@ export default {
 					return;
 				}
 			}
+		},
+		ai() {
+			return 0;
 		},
 		content() {
 			var choice = event.cost_data.choice;
@@ -874,6 +893,293 @@ export default {
 					player.unmarkAuto("vibe_xurong_shajue_used", player.getStorage("vibe_xurong_shajue_used"));
 				},
 			},
+		},
+	},
+
+	// 孟达：狐变
+	vibe_mengda_hubian: {
+		audio: 3,
+		trigger: { player: "damageEnd" },
+		filter(event, player) {
+			return true;
+		},
+		content() {
+			"step 0";
+			event.oldIdentity = player.identity;
+			event.friendCount = game.filterPlayer(function(current) {
+				return current.isFriendOf(player);
+			}).length;
+			player.changeMain(false);
+			"step 1";
+			if (player.identity !== event.oldIdentity) {
+				player.draw(event.friendCount);
+			}
+		},
+		ai: {
+			order: 3,
+			result: { player: 0 },
+		},
+	},
+
+	// 孟达：陈忠
+	vibe_mengda_chenzhong: {
+		audio: 2,
+		groupSkill: "shu",
+		locked: true,
+		trigger: { player: "useCardBegin" },
+		forced: true,
+		filter(event, player) {
+			return event.card && event.card.name === "sha" && game.hasPlayer(function(current) {
+				return current !== player && current.isFriendOf(player);
+			});
+		},
+		content() {
+			"step 0";
+			trigger.targets.length = 0;
+			event.voters = game.filterPlayer(function(current) {
+				return current !== player && current.isFriendOf(player);
+			});
+			event.votedTargets = [];
+			event.voteMap = {};
+			event.voteIdx = 0;
+			"step 1";
+			if (event.voteIdx >= event.voters.length) {
+				event.goto(3);
+				return;
+			}
+			var voter = event.voters[event.voteIdx];
+			voter.chooseTarget(true, "陈忠：请选择【杀】的目标", function(card, v, target) {
+				return trigger.player.canUse(trigger.card, target);
+			}).set("ai", function(target) {
+				return -get.attitude(_status.event.player, target);
+			});
+			"step 2";
+			var czVoter = event.voters[event.voteIdx];
+			if (result.bool && result.targets && result.targets.length) {
+				var czVoted = result.targets[0];
+				event.votedTargets.push(czVoted);
+				event.voteMap[czVoter.playerid] = czVoted;
+			} else {
+				event.voteMap[czVoter.playerid] = null;
+			}
+			event.voteIdx++;
+			event.goto(1);
+			"step 3";
+			for (var vi = 0; vi < event.voters.length; vi++) {
+				var v = event.voters[vi];
+				var czChoice = event.voteMap[v.playerid];
+				if (czChoice) {
+					var czLabel = !czChoice.isUnseen(0) ? get.translation(czChoice.name1) :
+						(czChoice.name2 && !czChoice.isUnseen(1) ? get.translation(czChoice.name2) :
+						czChoice.getSeatNum() + "号位");
+					v.chat("投：" + czLabel);
+				}
+			}
+			if (!event.votedTargets.length) {
+				return;
+			}
+			var countMap = {};
+			for (var i = 0; i < event.votedTargets.length; i++) {
+				var t = event.votedTargets[i];
+				countMap[t.playerid] = (countMap[t.playerid] || 0) + 1;
+			}
+			var maxCount = 0;
+			for (var key in countMap) {
+				if (countMap[key] > maxCount) maxCount = countMap[key];
+			}
+			var winners = [];
+			for (var j = 0; j < event.votedTargets.length; j++) {
+				var candidate = event.votedTargets[j];
+				if (countMap[candidate.playerid] === maxCount && !winners.includes(candidate)) {
+					winners.push(candidate);
+				}
+			}
+			trigger.targets.addArray(winners);
+		},
+	},
+
+	// 孟达：量反
+	vibe_mengda_liangfan: {
+		audio: 2,
+		groupSkill: "wei",
+		locked: true,
+		trigger: { player: "phaseUseBegin" },
+		forced: true,
+		filter(event, player) {
+			return game.hasPlayer(function(current) {
+				return current !== player && current.isFriendOf(player);
+			});
+		},
+		content() {
+			"step 0";
+			event.friends = game.filterPlayer(function(current) {
+				return current !== player && current.isFriendOf(player);
+			});
+			event.votedTargets = [];
+			event.voteMap = {};
+			event.voteIdx = 0;
+			"step 1";
+			if (event.voteIdx >= event.friends.length) {
+				event.goto(3);
+				return;
+			}
+			var voter = event.friends[event.voteIdx];
+			voter.chooseTarget(true, "量反：请选择一名友方角色", function(card, v, target) {
+				return target.isFriendOf(_status.event.getParent().player);
+			}).set("ai", function(target) {
+				return -get.attitude(_status.event.player, target);
+			});
+			"step 2";
+			var lfVoter = event.friends[event.voteIdx];
+			if (result.bool && result.targets && result.targets.length) {
+				var lfVoted = result.targets[0];
+				event.votedTargets.push(lfVoted);
+				event.voteMap[lfVoter.playerid] = lfVoted;
+			} else {
+				event.voteMap[lfVoter.playerid] = null;
+			}
+			event.voteIdx++;
+			event.goto(1);
+			"step 3";
+			for (var lvi = 0; lvi < event.friends.length; lvi++) {
+				var lv = event.friends[lvi];
+				var lfChoice = event.voteMap[lv.playerid];
+				if (lfChoice) {
+					var lfLabel = !lfChoice.isUnseen(0) ? get.translation(lfChoice.name1) :
+						(lfChoice.name2 && !lfChoice.isUnseen(1) ? get.translation(lfChoice.name2) :
+						lfChoice.getSeatNum() + "号位");
+					lv.chat("投：" + lfLabel);
+				}
+			}
+			if (!event.votedTargets.length) {
+				event.finish();
+				return;
+			}
+			var countMap2 = {};
+			for (var i2 = 0; i2 < event.votedTargets.length; i2++) {
+				var t2 = event.votedTargets[i2];
+				countMap2[t2.playerid] = (countMap2[t2.playerid] || 0) + 1;
+			}
+			var maxCount2 = 0;
+			for (var key2 in countMap2) {
+				if (countMap2[key2] > maxCount2) maxCount2 = countMap2[key2];
+			}
+			event.competitors = [];
+			for (var j2 = 0; j2 < event.votedTargets.length; j2++) {
+				var cand = event.votedTargets[j2];
+				if (countMap2[cand.playerid] === maxCount2 && !event.competitors.includes(cand)) {
+					event.competitors.push(cand);
+				}
+			}
+			player.chooseTarget(true, "量反：请选择另一名角色进行拼点", function (card, player, target) {
+				return !event.competitors.some(p => p === target) && target.countCards("h") > 0;
+			}).set("ai", function(target) {
+				return -get.attitude(_status.event.player, target);
+			});
+			"step 4";
+			if (!result.bool || !result.targets || !result.targets.length) {
+				event.finish();
+				return;
+			}
+			event.enemy = result.targets[0];
+			"step 5";
+			event.enemy.chooseToCompare(event.competitors).callback = lib.skill.vibe_mengda_liangfan.callback;
+		},
+		callback(){
+			if (event.winner === event.player) {
+				event.player.useCard({ name: "sha", isCard: true }, event.target, false).set("skill", "vibe_mengda_liangfan");
+			} else if (event.winner === event.target) {
+				event.target.useCard({ name: "sha", isCard: true }, event.player, false).set("skill", "vibe_mengda_liangfan");
+			}
+		}
+	},
+
+	// 孟达：求安（限定技，待实现 changeMainBefore 底层钩子后补全）
+	vibe_mengda_qiuan: {
+		audio: 3,
+		groupSkill: "ye",
+		limited: true,
+		trigger: { player: "changeBefore" },
+		filter(event, player) {
+			return !player.getStorage("qiuan_activated").length;
+		},
+		init(player, skill) {
+			player.storage.qiuan_activated = [];
+			player.storage.qiuan_anyFaction = [];
+			if (player.hasSkill("vibe_mengda_qiuan")) {
+				player.storage.qiuan_activated.push(true);
+				player.storage.qiuan_anyFaction.push(true);
+			}
+		},
+		content() {
+			"step 0";
+			"step 1";
+			player.storage.qiuan_activated.push(true);
+			player.storage.qiuan_anyFaction.push(true);
+			for (var group of lib.group) {
+				if (group !== "ye" && typeof player.exposeYeToGroup === "function") {
+					player.exposeYeToGroup(group);
+				}
+			}
+			player.addSkills(["vibe_mengda_qiuan_swap", "vibe_mengda_qiuan_swapback"]);
+		},
+		subSkill: {
+			swap: {
+				trigger: { player: "changeMainAfter" },
+				forced: false,
+				popup: false,
+				filter(event, player) {
+					return !player.hasMark("vibe_mengda_qiuan_swap") && !!player.name2;
+				},
+				content() {
+				"step 0";
+					player.addMark("vibe_mengda_qiuan_swap");
+					event.newMain = player.name2;
+					event.newVice = player.name1;
+					player.replaceCharacter(1, "gz_shibing2mahjong", false);
+				"step 1";
+					player.replaceCharacter(0, event.newMain, false);
+				"step 2";
+					player.replaceCharacter(1, event.newVice, false);
+				},
+				ai: {
+					result: { player: 1 },
+				},
+			},
+			swapback: {
+				trigger: { player: "changeBefore" },
+				forced: true,
+				popup: false,
+				filter(event, player) {
+					if (!player.hasMark("vibe_mengda_qiuan_swap")) {
+						console.log("[vibe_mengda_qiuan] swapback filter: not activated");
+					}
+					return player.hasMark("vibe_mengda_qiuan_swap");
+				},
+				content() {
+				"step 0";
+					player.clearMark("vibe_mengda_qiuan_swap");
+					event.newMain = player.name2;
+					event.newVice = player.name1;
+					player.replaceCharacter(1, "gz_shibing2mahjong", false);
+				"step 1";
+					player.replaceCharacter(0, event.newMain, false);
+				"step 2";
+					player.replaceCharacter(1, event.newVice, false);
+				}	
+			}
+		},
+		mark: true,
+		marktext: "换",	
+		intro: {
+			name: "求安",
+			content: "主副将暂时交换",
+		},
+		check(event, player) {
+			return player.isYe();
+		},
+		ai: {
+			result: { player: 1 },
 		},
 	},
 };

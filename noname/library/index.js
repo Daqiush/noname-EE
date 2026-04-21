@@ -6898,6 +6898,25 @@ export class Library {
 					frequent: true,
 					restart: true,
 				},
+				connect_choice_num: {
+					name: "候选武将数",
+					init: "8",
+					restart: true,
+					item: {
+						5: "五",
+						6: "六",
+						7: "七",
+						8: "八",
+						9: "九",
+						10: "十",
+					},
+				},
+				connect_change_identity: {
+					name: "自由选将/选座",
+					init: false,
+					restart: true,
+					intro: "开启后，玩家可自由选择任意武将和座位。若多名玩家选择了同一座位，房间编号较小的玩家优先获得。",
+				},
 			},
 			config: {
 				update: function (config, map) {

@@ -9,23 +9,32 @@ export default {
 	vibe_zhaoyun_longdan: "龙胆",
 	vibe_zhaoyun_longdan_info: "你可以将手牌区中的一张【杀】/【闪】转化为【杀/闪】。",
 	vibe_zhaoyun_yajiao: "涯角",
-	vibe_zhaoyun_yajiao_info: "每回合各限一次：\n1.当你使用【杀/闪】时，你可以摸一张牌；\n2.当你打出【杀/闪】时，你可以获得当前回合角色的一张手牌。",
+	vibe_zhaoyun_yajiao_info: "每回合各限一次：<br>1.当你使用【杀/闪】时，你可以摸一张牌；<br>2.当你打出【杀/闪】时，你可以获得当前回合角色的一张手牌。",
 
 	vibe_jiangqin_shangyi: "尚义",
-	vibe_jiangqin_shangyi_info: "出牌阶段限一次，你可以令一名其他角色观看你的手牌。若如此做，你选择一项：\n1.观看其手牌并可以弃置/重铸其一张黑/红色牌；2.观看其暗置的武将牌且其本回合不能明置之。",
+	vibe_jiangqin_shangyi_info: "出牌阶段限一次，你可以令一名其他角色观看你的手牌。若如此做，你选择一项：<br>1.观看其手牌并可以弃置/重铸其一张黑/红色牌；<br>2.观看其暗置的武将牌且其本回合不能明置之。",
 	vibe_jiangqin_jianyi: "俭衣",
 	vibe_jiangqin_jianyi_info: "当你需要使用一张普【杀】/普【无懈可击】时，你可以使用一张装备手牌，然后视为使用所需使用的牌。若替换原装备牌，你可以令此牌不能被抵消或不计入次数。",
 
 	vibe_bianfuren_yide: "仪德",
-	vibe_bianfuren_yide_info: "相同势力的角色受到伤害时，若伤害来源是与另一名相同势力的角色，你可以防止之。",
+	vibe_bianfuren_yide_info: "相同势力的角色受到伤害时，若伤害来源是与另一名相同势力的角色，你可防止之。",
 	vibe_bianfuren_cijie: "慈诫",
-	vibe_bianfuren_cijie_info: "相同势力的角色于其出牌阶段使用【桃】选择目标后，可以额外指定任意名已受伤角色，若如此做，你变更此武将。",
+	vibe_bianfuren_cijie_info: "相同势力的角色于其出牌阶段使用【桃】选择目标后，可以指定另任意名已受伤角色为额外目标，若如此做，你变更此武将。",
 	vibe_bianfuren_yuejian: "约俭",
-	vibe_bianfuren_yuejian_info: "每回合限一次，相同势力角色弃置自己的牌时，你可以令其选择其中一张，然后其获得之。",
+	vibe_bianfuren_yuejian_info: "每回合限一次，相同势力角色弃置自己的牌后，你可以令其选择其中一张，然后其获得之。",
 
 	vibe_zhuhuan_jutian: "拒天",
-	vibe_zhuhuan_jutian_info: "每回合各限一次，当你对一名其他角色造成伤害后，你可以选择一项：\n1.令一名与其势力相同的角色将手牌弃至受伤害角色的体力值；\n2.令一名与你势力相同的角色将手牌摸至受伤害角色的体力上限。",
+	vibe_zhuhuan_jutian_info: "每回合各限一次，当你对一名其他角色造成伤害后，你可以选择一项：<br>1.令一名与其势力相同的角色将手牌弃至受伤害角色的体力值；<br>2.令一名与你势力相同的角色将手牌摸至受伤害角色的体力上限。",
 
 	vibe_xurong_shajue: "杀绝",
 	vibe_xurong_shajue_info: "出牌阶段每名角色限一次，你可以弃置一名手牌数为1的角色的一张手牌，然后视为对除其以外的一名其他角色使用一张【决斗】，以此法使用的【决斗】对没有手牌的角色造成的伤害+1。",
+
+	vibe_mengda_hubian: "狐变",
+	vibe_mengda_hubian_info: "当你受到伤害后，你可变更主将，然后若你的势力因此变化，你摸X张牌（X为此前相同势力角色数）。",
+	vibe_mengda_chenzhong: "陈忠",
+	vibe_mengda_chenzhong_info: "<b>蜀势力技</b>，锁定技，若有其他友方角色，你使用【杀】的目标改为由所有其他友方角色投票决定。",
+	vibe_mengda_liangfan: "量反",
+	vibe_mengda_liangfan_info: "<b>魏势力技</b>，锁定技，出牌阶段开始时，你令所有其他友方角色投票选出友方角色，所有得票最多的角色同时与你选择的另一名角色拼点，赢的角色视为对没赢的角色使用一张【杀】。",
+	vibe_mengda_qiuan: "求安",
+	vibe_mengda_qiuan_info: "<b>野心家势力技</b>，限定技：你变更主将前，可永久暴露野心，若如此做：本局游戏中，此武将牌可以搭配任何势力的主将；你变更主将后可以交换主副将至下次变更前。",
 };

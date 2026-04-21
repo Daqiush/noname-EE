@@ -613,6 +613,98 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 		}
 	});
 
+	// ── 自由选座（在发将之前，圈子已形成但武将尚未分配）──────────────────
+	// 主机始终占 game.players[0]，非主机玩家在 positions 1..N-1 中自由选座。
+	// 实现：在固定的 DOM 圈位上交换 ws/playerid/nickname，然后广播新排布给客户端。
+	if (lib.configOL.change_identity) {
+		const n = game.players.length;
+		const m = n - 1; // 非主机可选座位数
+
+		// 广播座位按钮的翻译文字，确保客户端渲染前已就绪
+		broadcastAll(count => {
+			for (let i = 1; i <= count; i++) {
+				lib.translate["gz_ee_seat_" + i] = get.cnNumber(i, true) + "号位";
+			}
+		}, m);
+
+		// 仅向非主机玩家展示选座对话框
+		const nonHostPlayers = game.players.slice(1);
+		const seatButtons = Array.from({ length: m }, (_, i) => ["", "", "gz_ee_seat_" + (i + 1)]);
+		const seatList2 = nonHostPlayers.map(p => [p, ["选择座位（冲突时主机视角编号小者优先）", [seatButtons, "vcard"]], 1, true]);
+
+		const seatNext = game.me.chooseButtonOL(seatList2, void 0, void 0);
+		seatNext.set("switchToAuto", () => {
+			// @ts-expect-error 祖宗之法就是这么写的
+			_status.event.result = { bool: true, links: [seatButtons[Math.floor(Math.random() * m)]] };
+		});
+		seatNext.set("processAI", () => {
+			return { bool: true, links: [seatButtons[Math.floor(Math.random() * m)]] };
+		});
+		const seatResult = await seatNext.forResult();
+
+		// 按 nonHostPlayers 顺序（即主机视角的低编号优先）分配座位
+		const taken = new Set();
+		/** @type {Map<object, number>} 原 nonHostPlayers 中的玩家 → 目标 0-based slot（对应 game.players[slot+1]）*/
+		const seatMap = new Map();
+		const unassigned = [];
+		for (const player of nonHostPlayers) {
+			const res = seatResult[player.playerid];
+			const link = res && res.links && res.links[0];
+			const seatStr = Array.isArray(link) ? link[2] : null;
+			const preferred = seatStr && typeof seatStr === "string" && seatStr.startsWith("gz_ee_seat_")
+				? parseInt(seatStr.slice(11)) - 1  // 转为 0-based
+				: null;
+			if (preferred !== null && !isNaN(preferred) && preferred >= 0 && preferred < m && !taken.has(preferred)) {
+				seatMap.set(player, preferred);
+				taken.add(preferred);
+			} else {
+				unassigned.push(player);
+			}
+		}
+		let nextFree = 0;
+		for (const player of unassigned) {
+			while (taken.has(nextFree)) nextFree++;
+			seatMap.set(player, nextFree);
+			taken.add(nextFree);
+			nextFree++;
+		}
+
+		// 将各玩家的网络标识（ws/playerid/nickname）写入目标圈位，不移动 DOM 元素
+		const origData = nonHostPlayers.map(p => ({ ws: p.ws, playerid: p.playerid, nickname: p.nickname }));
+		const origIdxOf = new Map(nonHostPlayers.map((p, i) => [p, i]));
+		// 构建：目标 slot → 应放入该圈位的原始数据
+		const slotToData = new Array(m);
+		for (const [player, slot] of seatMap) {
+			slotToData[slot] = origData[origIdxOf.get(player)];
+		}
+		for (let k = 0; k < m; k++) {
+			const data = slotToData[k];
+			game.players[k + 1].ws = data.ws;
+			game.players[k + 1].playerid = data.playerid;
+			game.players[k + 1].nickname = data.nickname;
+			game.players[k + 1].setNickname();
+			lib.playerOL[data.playerid] = game.players[k + 1];
+		}
+
+		// 重新向客户端广播新的排座映射（与 randomMapOL 内的 broadcast 格式一致）
+		const newMap = game.players.map(p => [p.playerid, p.nickname]);
+		game.broadcast(map => {
+			for (let i = 0; i < map.length; i++) {
+				if (map[i][0] == game.me.playerid) {
+					map = map.concat(map.splice(0, i));
+					break;
+				}
+			}
+			for (let i = 0; i < game.players.length; i++) {
+				game.players[i].playerid = map[i][0];
+				game.players[i].nickname = map[i][1];
+				game.players[i].setNickname();
+				lib.playerOL[game.players[i].playerid] = game.players[i];
+			}
+		}, newMap);
+	}
+	// ── 自由选座结束 ───────────────────────────────────────────────────────────
+
 	/** @type {Record<string, Character>} */
 	const pack = Reflect.get(lib.characterPack, "mode_guozhan_ee");
 	// 过滤掉 mahjong 势力武将（作为彩蛋单独处理）
@@ -627,66 +719,70 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 	Reflect.set(_status, "yeidentity", []);
 
 	const list2 = [];
-	let num;
-	if (lib.configOL.number * 6 > characterList.length) {
-		num = 5;
-	} else if (lib.configOL.number * 7 > characterList.length) {
-		num = 6;
-	} else {
-		num = 7;
-	}
+	const freeSelect = lib.configOL.change_identity;
 
-	characterList.randomSort();
-
-	// 2.5% 概率给一名真人玩家发 mahjong 势力武将（彩蛋）
-	let mahjongLuckyPlayerIndex = -1;
-	let mahjongCharacter = null;
-	if (mahjongCharacters.length > 0 && Math.random() < 0.025) {
-		// 找到所有真人玩家的索引
-		const humanPlayerIndices = [];
-		for (let i = 0; i < game.players.length; i++) {
-			// 真人玩家：是 game.me 或者是 isOnline() 为 true 的玩家
-			if (game.players[i] === game.me || (game.players[i].isOnline && game.players[i].isOnline())) {
-				humanPlayerIndices.push(i);
-			}
-		}
-		if (humanPlayerIndices.length > 0) {
-			mahjongLuckyPlayerIndex = humanPlayerIndices.randomGet();
-			mahjongCharacter = mahjongCharacters.randomGet();
-		}
-	}
-
-	// 为所有玩家发将，并进行合法性检查
 	/** @type {string[][]} */
 	let playerChooseLists = [];
-	let allValid = false;
 
-	while (!allValid) {
-		// 重置
-		playerChooseLists = [];
-		const tempCharacterList = characterList.slice(0);
-		tempCharacterList.randomSort();
-
-		// 为每个玩家发将
+	if (freeSelect) {
+		// 自由选将：每名玩家看到全部可用武将
 		for (let i = 0; i < game.players.length; i++) {
-			const chooseList = game.getCharacterChoice(tempCharacterList, num);
-			// 如果是幸运玩家，添加 mahjong 势力武将
-			if (i === mahjongLuckyPlayerIndex && mahjongCharacter) {
-				chooseList.push(mahjongCharacter);
-			}
-			playerChooseLists.push(chooseList);
+			playerChooseLists.push(characterList.slice(0));
+		}
+	} else {
+		let num;
+		if (lib.configOL.number * 6 > characterList.length) {
+			num = 5;
+		} else if (lib.configOL.number * 7 > characterList.length) {
+			num = 6;
+		} else {
+			num = 7;
 		}
 
-		// 检查是否所有玩家都有合法组合
-		allValid = playerChooseLists.every(chooseList => hasValidCharacterPair(chooseList));
-	}
+		characterList.randomSort();
 
-	// 重置 characterList 并使用已验证的发将结果
-	characterList.length = 0;
-	for (const chooseList of playerChooseLists) {
-		for (const char of chooseList) {
-			if (!characterList.includes(char)) {
-				characterList.push(char);
+		// 2.5% 概率给一名真人玩家发 mahjong 势力武将（彩蛋）
+		let mahjongLuckyPlayerIndex = -1;
+		let mahjongCharacter = null;
+		if (mahjongCharacters.length > 0 && Math.random() < 0.025) {
+			// 找到所有真人玩家的索引
+			const humanPlayerIndices = [];
+			for (let i = 0; i < game.players.length; i++) {
+				// 真人玩家：是 game.me 或者是 isOnline() 为 true 的玩家
+				if (game.players[i] === game.me || (game.players[i].isOnline && game.players[i].isOnline())) {
+					humanPlayerIndices.push(i);
+				}
+			}
+			if (humanPlayerIndices.length > 0) {
+				mahjongLuckyPlayerIndex = humanPlayerIndices.randomGet();
+				mahjongCharacter = mahjongCharacters.randomGet();
+			}
+		}
+
+		let allValid = false;
+		while (!allValid) {
+			playerChooseLists = [];
+			const tempCharacterList = characterList.slice(0);
+			tempCharacterList.randomSort();
+
+			for (let i = 0; i < game.players.length; i++) {
+				const chooseList = game.getCharacterChoice(tempCharacterList, num);
+				if (i === mahjongLuckyPlayerIndex && mahjongCharacter) {
+					chooseList.push(mahjongCharacter);
+				}
+				playerChooseLists.push(chooseList);
+			}
+
+			allValid = playerChooseLists.every(chooseList => hasValidCharacterPair(chooseList));
+		}
+
+		// 重置 characterList 并使用已验证的发将结果
+		characterList.length = 0;
+		for (const chooseList of playerChooseLists) {
+			for (const char of chooseList) {
+				if (!characterList.includes(char)) {
+					characterList.push(char);
+				}
 			}
 		}
 	}
@@ -1222,10 +1318,10 @@ export const hideCharacter = async (event, _trigger, player) => {
 	}
 
 	player.checkConflict();
-	
+
 	// 重新计算势力
 	if (typeof player.recalculateIdentity === "function") {
-		player.recalculateIdentity();
+		await player.recalculateIdentity();
 	}
 }
 
@@ -1491,7 +1587,7 @@ export const changeViceOnline = async (event, _trigger, player) => {
 	
 	// 重新计算势力
 	if (typeof player.recalculateIdentity === "function") {
-		player.recalculateIdentity();
+		await player.recalculateIdentity();
 	}
 }
 
@@ -1593,16 +1689,40 @@ export const changeVice = [
 			game.log(player, "将副将从", "#g" + get.translation(player.name2), "变更为", "#g" + get.translation(name));
 		}
 		player.viceChanged = true;
+
+		// 替换前记录新副将技能，替换后暂时屏蔽（直至本结算链结束）
+		const newViceSkills = lib.character[name]?.skills ?? [];
+		if (newViceSkills.length) {
+			if (!player.storage.newCharSkillsDisabled) {
+				player.storage.newCharSkillsDisabled = new Set();
+			}
+			for (const s of newViceSkills) {
+				player.storage.newCharSkillsDisabled.add(s);
+			}
+			if (!player.tempSkills?.["_gze_newchar_disabled_cleanup"]) {
+				let rootEvent = event;
+				while (rootEvent.parent) rootEvent = rootEvent.parent;
+				const capturedRoot = rootEvent;
+				player.addTempSkill("_gze_newchar_disabled_cleanup", evt => {
+					let e = evt;
+					while (e) {
+						if (e === capturedRoot) return false;
+						e = e.parent;
+					}
+					return true;
+				});
+			}
+		}
 		player.reinitCharacter(player.name2, name, false);
 		if (event.hidden) {
 			if (!player.isUnseen(1)) {
 				player.hideCharacter(1, false);
 			}
 		}
-		
+
 		// 重新计算势力
 		if (typeof player.recalculateIdentity === "function") {
-			player.recalculateIdentity();
+			await player.recalculateIdentity();
 		}
 	},
 ];
@@ -1720,10 +1840,10 @@ export const transCharacter = async (event, _trigger, player) => {
 	
 	// 重新计算势力
 	if (typeof player.recalculateIdentity === "function") {
-		player.recalculateIdentity();
+		await player.recalculateIdentity();
 	}
 	if (typeof target.recalculateIdentity === "function") {
-		target.recalculateIdentity();
+		await target.recalculateIdentity();
 	}
 }
 
@@ -1737,7 +1857,7 @@ export const transCharacter = async (event, _trigger, player) => {
 export const replaceCharacter = async (event, _trigger, player) => {
 	const { num, characterName, hidden } = event;
 	const oldName = player["name" + (num + 1)];
-	
+
 	if (!lib.character[characterName]) {
 		console.warn(`replaceCharacter: 武将 "${characterName}" 不存在`);
 		return;
@@ -1782,7 +1902,7 @@ export const replaceCharacter = async (event, _trigger, player) => {
 		// 不暗置时，武将已经是明置状态，重新计算势力
 		// numOfReadyToShow=0 表示不是新增明置，而是替换后的状态
 		if (typeof player.recalculateIdentity === "function") {
-			player.recalculateIdentity();
+			await player.recalculateIdentity();
 		}
 	}
 }
@@ -1875,6 +1995,10 @@ export const isValidCharacterCombination = (mainName, viceName, playerGroup) => 
  */
 export const changeMain = async (event, _trigger, player) => {
 	const { hidden } = event;
+
+	// 变更主将前时机，技能可在此拦截（如 vibe_mengda_qiuan 求安）
+	await event.trigger("changeBefore");
+
 	const oldMainName = player.name1;
 	let viceName = player.name2;
 	
@@ -1933,8 +2057,16 @@ export const changeMain = async (event, _trigger, player) => {
 			continue;
 		}
 		
-		// 检查是否可作为合法主将
-		if (isValidCharacterCombination(candidateName, viceName, playerGroup)) {
+		// mahjong 势力武将不出现在变更主将的武将牌堆里（放回牌堆底部）
+		if (lib.character[candidateName]?.group === "han") {
+			game.log("#y" + get.translation(candidateName), "是汉势力，放回牌堆底部");
+			// @ts-expect-error 类型就是这么写的
+			_status.characterlist.push(candidateName);
+			continue;
+		}
+		
+		// 检查是否可作为合法主将（qiuan_anyFaction 为 true 时跳过势力限制）
+		if (isValidCharacterCombination(candidateName, viceName, playerGroup) || (player.getStorage("qiuan_anyFaction").length && ["wei", "shu", "wu", "qun"].includes(lib.character[candidateName].group) && !lib.character[candidateName].majorSecondGroup)) {
 			newMainName = candidateName;
 			break;
 		}
@@ -1970,9 +2102,32 @@ export const changeMain = async (event, _trigger, player) => {
 		game.log(player, "将主将从", "#g" + get.translation(oldMainName), "变更为", "#g" + get.translation(newMainName));
 	}
 	
-	// 执行武将替换
+	// 执行武将替换，替换前记录新武将技能，替换后暂时屏蔽（直至本结算链结束）
+	const newMainSkills = lib.character[newMainName]?.skills ?? [];
+	if (newMainSkills.length) {
+		if (!player.storage.newCharSkillsDisabled) {
+			player.storage.newCharSkillsDisabled = new Set();
+		}
+		for (const s of newMainSkills) {
+			player.storage.newCharSkillsDisabled.add(s);
+		}
+		// 只注册一次清理 tempSkill（多次 changeMain 共用同一个根事件边界）
+		if (!player.tempSkills?.["_gze_newchar_disabled_cleanup"]) {
+			let rootEvent = event;
+			while (rootEvent.parent) rootEvent = rootEvent.parent;
+			const capturedRoot = rootEvent;
+			player.addTempSkill("_gze_newchar_disabled_cleanup", evt => {
+				let e = evt;
+				while (e) {
+					if (e === capturedRoot) return false;
+					e = e.parent;
+				}
+				return true;
+			});
+		}
+	}
 	await player.reinitCharacter(oldMainName, newMainName, false);
-	
+
 	// 如果需要暗置
 	if (hidden) {
 		if (!player.isUnseen(0)) {
@@ -1983,9 +2138,12 @@ export const changeMain = async (event, _trigger, player) => {
 		// 不暗置时，武将已经是明置状态，重新计算势力
 		// numOfReadyToShow=0 表示不是新增明置，而是替换后的状态
 		if (typeof player.recalculateIdentity === "function") {
-			player.recalculateIdentity();
+			await player.recalculateIdentity();
 		}
 	}
+
+	// 变更主将后时机，技能可在此响应（如 vibe_mengda_qiuan 求安的交换主副将）
+	await event.trigger("changeMainAfter");
 };
 
 /**
@@ -2001,6 +2159,30 @@ export const zhulian = async (_event, _trigger, player) => {
 	}
 }
 
+/**
+ * onRecalculateIdentity 底层事件内容。
+ *
+ * 势力计算已由 player._performIdentityRecalculation() 同步完成。
+ * 本函数作为技能触发点，技能可通过 trigger.global/player: "onRecalculateIdentity" 响应。
+ *
+ * event 上携带的信息：
+ *   - event.player      ：势力发生变化的角色
+ *   - event.identity    ：计算后的 identity（单一主势力，如 "wei"、"ye"）
+ *   - event.group       ：计算后的 group（可能为复合势力，如 "wei_shu"、"ye_wei"）
+ *   - event.ex_identity ：计算前的 identity
+ *   - event.ex_group    ：计算前的 group
+ *
+ * @param {GameEvent} event
+ * @param {GameEvent} _trigger
+ * @param {Player} player
+ */
+export const onRecalculateIdentity = async (event, _trigger, player) => {
+	event.identity = player.identity;
+	event.group = player.group;
+	// ex_identity / ex_group 已由 recalculateIdentity() 在调用前写入 event
+	await event.trigger("onRecalculateIdentity");
+};
+
 export default {
 	hideCharacter,
 	replaceCharacter,
@@ -2015,4 +2197,5 @@ export default {
 	mayChangeVice,
 	transCharacter,
 	zhulian,
+	onRecalculateIdentity,
 };

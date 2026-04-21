@@ -203,8 +203,15 @@ export class GetGuozhan extends Get {
 		let count = 0;
 		
 		for (const player of players) {
-			// 已确认为野心家的玩家不计入任何势力人口
+			// 半野心家（如魏野：group="wei_ye", identity="wei"）仍占据其有效势力名额
+			// 纯野心家（group="ye"）不计入任何势力
 			if (player._confirmedYe) {
+				if (player.group && player.group !== "ye" && player.identity &&
+					player.identity !== "ye" && !player.identity.endsWith("_ye")) {
+					if (player.identity === group) {
+						count++;
+					}
+				}
 				continue;
 			}
 			

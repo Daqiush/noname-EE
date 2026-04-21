@@ -7,7 +7,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: ["pokemon_weishen", "pokemon_daifa", "pokemon_zhili", "pokemon_rixin", "pokemon_weiyang", "pokemon_tanwei", "pokemon_xingjian"],
+		skills: ["pokemon_weishen", "pokemon_daifa", "pokemon_zhili", "pokemon_rixin", "pokemon_weiyang", "pokemon_tanwei", "pokemon_xingjian", "pokemon_xinya"],
 		hasSkinInGuozhan: true,
 	}),
 	gz_pokemon_guoranweng: new Character({

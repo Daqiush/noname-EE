@@ -4,15 +4,27 @@ import { Game } from "../../../../noname/game/index.js";
 import { showYexingsContent, chooseCharacterContent, chooseCharacterOLContent, isValidCharacterCombination } from "./content.js";
 import { isYeIdentity } from "./player.js";
 
+// 变更得来的新武将技能，在当前结算链结束时清除屏蔽
+lib.skill["_gze_newchar_disabled_cleanup"] = {
+	charlotte: true,
+	onremove(player) {
+		delete player.storage.newCharSkillsDisabled;
+	},
+};
+
 // 注册到 game 对象，使其在联机 eval 上下文中可访问
 game.isValidCharacterPair = function (name1, name2) {
 	if (_status.separatism) return true;
 	return isValidCharacterCombination(name1, name2);
 };
 
-function playerHasGroup(player, group) {
+const playerHasGroup = (player, group) => {
 	if (!player || !group) {
 		return false;
+	}
+	// "ye" groupSkill matches any 野心家 (pure "ye" or compound "x_ye")
+	if (group === "ye" && typeof player.isYe === "function") {
+		return player.isYe();
 	}
 	if (typeof player.hasIdentity === "function") {
 		return player.hasIdentity(group);
@@ -23,7 +35,8 @@ function playerHasGroup(player, group) {
 			? player.group.split("_")
 			: [];
 	return identities.includes(group);
-}
+};
+
 
 const resolveGroupSkill = skill => {
 	let cur = skill;
@@ -103,6 +116,13 @@ export class GameGuozhan extends Game {
 				const group = resolveGroupSkill(skill);
 				if (group && !playerHasGroup(player, group)) {
 					return false;
+				}
+				// 变更得来的新武将技能，在当前结算结束前无效
+				const newCharDisabled = player.storage?.newCharSkillsDisabled;
+				if (newCharDisabled) {
+					for (const d of newCharDisabled) {
+						if (skill === d || skill.startsWith(d + '_')) return false;
+					}
 				}
 				return true;
 			});
