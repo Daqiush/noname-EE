@@ -391,7 +391,9 @@ export class PlayerGuozhan extends Player {
 			delete this._viceSecondGroup;
 			delete this._confirmedYe; // 已确认的野心家身份
 			delete this._confirmedYeGroup; // 导致成为野心家的势力
-			delete this._exposedYeGroups; // 清除所有暴露野心的记录
+			if (!this.hasMark("yexin_mark")) {
+				delete this._exposedYeGroups; // 清除所有暴露野心的记录（持有野心家标记者永不清除）
+			}
 			delete this._validGroup; // 有效势力标记
 			// 设为未确定
 			this.identity = "unknown";
@@ -412,7 +414,7 @@ export class PlayerGuozhan extends Player {
 			const viceSecondGroup = viceInfo?.majorSecondGroup || viceInfo?.minorSecondGroup;
 			
 			// DEBUG: 输出双势力信息
-			console.log(`[recalculateIdentity] name2=${this.name2}, viceGroup=${viceGroup}, majorSecondGroup=${viceInfo?.majorSecondGroup}, minorSecondGroup=${viceInfo?.minorSecondGroup}, viceSecondGroup=${viceSecondGroup}`);
+			console.log(`[recalculateIdentity] name1=${this.name1}, name2=${this.name2}, viceGroup=${viceGroup}, majorSecondGroup=${viceInfo?.majorSecondGroup}, minorSecondGroup=${viceInfo?.minorSecondGroup}, viceSecondGroup=${viceSecondGroup}, exposedYeGroups=${this._exposedYeGroups}, confirmedYeGroup=${this._confirmedYeGroup}`);
 			
 			// 副将势力集合
 			const viceGroups = [viceGroup];
@@ -420,14 +422,12 @@ export class PlayerGuozhan extends Player {
 				viceGroups.push(viceSecondGroup);
 			}
 			
-			// 清除不在副将势力中的暴露野心记录
-			// 只有副将势力不包含某个暴露势力时，才能清除该势力的暴露记录
-			if (this._exposedYeGroups && this._exposedYeGroups.length > 0) {
+			// 清除不在副将势力中的暴露野心记录（持有野心家标记者永不清除）
+			if (this._exposedYeGroups && this._exposedYeGroups.length > 0 && !this.hasMark("yexin_mark")) {
 				this._exposedYeGroups = this._exposedYeGroups.filter(g => viceGroups.includes(g));
 				if (this._exposedYeGroups.length === 0) {
 					delete this._exposedYeGroups;
 				}
-				console.log(`[recalculateIdentity] 更新后的暴露野心记录: [${this._exposedYeGroups?.join(", ") || "无"}]`);
 			}
 			
 			// 检查是否需要清除当前野心家标记
@@ -541,14 +541,12 @@ export class PlayerGuozhan extends Player {
 			delete this._confirmedYe;
 			delete this._confirmedYeGroup;
 			
-			// 清除与主将势力不同的暴露野心记录
-			// 例如：AB双势力副将对A暴露野心后，明置B势力主将，则清除对A的暴露记录
-			if (this._exposedYeGroups && this._exposedYeGroups.length > 0) {
+			// 清除与主将势力不同的暴露野心记录（持有野心家标记者永不清除）
+			if (this._exposedYeGroups && this._exposedYeGroups.length > 0 && !this.hasMark("yexin_mark")) {
 				this._exposedYeGroups = this._exposedYeGroups.filter(g => g === mainGroup);
 				if (this._exposedYeGroups.length === 0) {
 					delete this._exposedYeGroups;
 				}
-				console.log(`[recalculateIdentity] 主将明置后更新暴露野心记录: [${this._exposedYeGroups?.join(", ") || "无"}]`);
 			}
 			
 			// 设置 identity 和 group
@@ -578,8 +576,11 @@ export class PlayerGuozhan extends Player {
 				this._confirmedYeGroup = mainGroup; // 记录是哪个势力导致成为野心家
 				this.exposeYeToGroup(mainGroup);
 			}
-			
-			console.log(`[recalculateIdentity] 主将明置: mainGroup=${mainGroup}, group=${this.group}, identity=${this.identity}, _confirmedYe=${this._confirmedYe}, _confirmedYeGroup=${this._confirmedYeGroup}`);
+			const viceInfo = lib.character[this.name2];
+			const viceGroup = viceInfo?.group;
+			const viceSecondGroup = viceInfo?.majorSecondGroup || viceInfo?.minorSecondGroup;
+			console.log(`[recalculateIdentity] （主将明置）name1=${this.name1}, name2=${this.name2}, viceGroup=${viceGroup}, majorSecondGroup=${viceInfo?.majorSecondGroup}, minorSecondGroup=${viceInfo?.minorSecondGroup}, viceSecondGroup=${viceSecondGroup}, exposedYeGroups=${this._exposedYeGroups}, confirmedYeGroup=${this._confirmedYeGroup}`);
+
 			this.setIdentity(this.identity);
 			this.ai.shown = 1;
 			return;
@@ -735,10 +736,13 @@ export class PlayerGuozhan extends Player {
 		if (this.identity === "unknown") {
 			return true;
 		}
-		
+
 		// 有多个势力
 		const identities = this.getIdentities();
-		return identities.length !== 1;
+		if (identities.length !== 1) return true;
+
+		// 复合野心家身份（如 "shu_ye"）：兼具本势力与野心家，也算未确定
+		return isYeIdentity(identities[0]) && identities[0] !== "ye";
 	}
 
 	/**
@@ -1022,6 +1026,10 @@ export class PlayerGuozhan extends Player {
 			source.discard(source.getCards("he"));
 			delete source.shijun;
 		} else if (source && source.identity != "unknown") {
+			// 若之前被 _gze_ye_kill_choice 设置了跳过野心家奖惩标记，则本次按普通击杀计算
+			const skipYeReward = source._yeRewardSkip;
+			if (skipYeReward) delete source._yeRewardSkip;
+
 			if (source.shijun2) {
 				delete source.shijun2;
 				source.draw(
@@ -1033,7 +1041,7 @@ export class PlayerGuozhan extends Player {
 			} else if (isYeIdentity(that.identity)) {
 				if (that.getStorage("yexinjia_friend").includes(source) || source.getStorage("yexinjia_friend").includes(that)) {
 					source.discard(source.getCards("he"));
-				} else if (source.isYe() && !source.getStorage("yexinjia_friend").length) {
+				} else if (!skipYeReward && source.isYe() && !source.getStorage("yexinjia_friend").length) {
 					// 野心家击杀野心家（互为敌人），固定摸3张
 					source.draw(3);
 				} else {
@@ -1056,11 +1064,11 @@ export class PlayerGuozhan extends Player {
 			} else if (source.hasCommonIdentity(that)) {
 				// 同势力（含半野心家击杀友方的情形）
 				source.discard(source.getCards("he"));
-			} else if (source.isYe() && !source.getStorage("yexinjia_friend").length) {
+			} else if (!skipYeReward && source.isYe() && !source.getStorage("yexinjia_friend").length) {
 				// 纯野心家或半野心家击杀敌方，固定摸3张
 				source.draw(3);
 			} else {
-				// 普通异势力击杀
+				// 普通异势力击杀（或选择了按普通击杀执行的野心家）
 				source.draw(get.population(that.identity) + 1);
 			}
 		}
@@ -1377,6 +1385,55 @@ export class PlayerGuozhan extends Player {
 	}
 
 	/**
+	 * 统一变更/招募武将接口
+	 *
+	 * @param {{ slot?: 0|1, num?: number, optional?: boolean, noFactionChange?: boolean, hidden?: boolean }} [opts]
+	 */
+	changeCharacterEE(opts = {}) {
+		// @ts-expect-error 类型就是这么写的
+		const next = game.createEvent("changeCharacterEE");
+		// @ts-expect-error 类型就是这么写的
+		next.player = this;
+		if (opts.slot !== undefined) {
+			// @ts-expect-error 自定义属性
+			next.slot = opts.slot;
+		}
+		if (opts.num !== undefined) {
+			// @ts-expect-error 自定义属性
+			next.num = opts.num;
+		}
+		if (opts.optional) {
+			// @ts-expect-error 自定义属性
+			next.optional = true;
+		}
+		if (opts.noFactionChange) {
+			// @ts-expect-error 自定义属性
+			next.noFactionChange = true;
+		}
+		if (opts.hidden) {
+			// @ts-expect-error 类型就是这么写的
+			next.hidden = true;
+		}
+		// @ts-expect-error 类型就是这么写的
+		next.setContent("changeCharacterEE");
+		return next;
+	}
+
+	/**
+	 * 招募武将：玩家选择主/副将位置，明置并从牌堆选取不导致势力改变的合法武将，
+	 * 再决定是否替换。
+	 */
+	recruitCharacter() {
+		// @ts-expect-error 类型就是这么写的
+		const next = game.createEvent("recruitCharacter");
+		// @ts-expect-error 类型就是这么写的
+		next.player = this;
+		// @ts-expect-error 类型就是这么写的
+		next.setContent("recruitCharacter");
+		return next;
+	}
+
+	/**
 	 * 与一名角色的主副将进行易位
 	 *
 	 * @param { Player } target 要交换武将的对象
@@ -1606,18 +1663,32 @@ export class PlayerGuozhan extends Player {
          * 
          * @param { string } group 暴露野心的势力
          */
-        exposeYeToGroup(group) {
-                if (!this._exposedYeGroups) {
-                        this._exposedYeGroups = [];
-                }
-                if (!this._exposedYeGroups.includes(group)) {
-                        this._exposedYeGroups.push(group);
-                        console.log(`[exposeYeToGroup] 记录对 ${group} 势力暴露野心，当前记录: [${this._exposedYeGroups.join(", ")}]`);
-                }
-        }
+	exposeYeToGroup(group) {
+		if (!this._exposedYeGroups) {
+			this._exposedYeGroups = [];
+		}
+		if (!this._exposedYeGroups.includes(group)) {
+			this._exposedYeGroups.push(group);
+		}
+	}
 
-        /**
-	 * 玩家是否“不会”变成野心家
+	/**
+	 * 全局暴露野心：对场上所有非野心家势力暴露野心，并获得野心家标记。
+	 * 持有野心家标记后，暴露野心记录永不清除。
+	 */
+	globalExposeYexin() {
+		this._globalYexin = true;
+		const groups = lib.group.filter(id => !isYeIdentity(id));
+		for (const group of groups) {
+			this.exposeYeToGroup(group);
+		}
+		if (!this.hasMark("yexin_mark")) {
+			this.addMark("yexin_mark", 1);
+		}
+	}
+
+	/**
+	 * 玩家是否”不会”变成野心家
 	 *
 	 * @param { string } [group] 判断所处的势力
 	 * @returns { boolean }

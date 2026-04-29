@@ -1,7 +1,7 @@
 export default {
 	"#gz_vibe_zhugeliang:die": "天命尽矣，计难再施……",
-	"#vibe_zgl_huoji": "借火成势，焚敌于顷刻。",
-	"#vibe_zgl_kanpo": "虚实已明，此计可破。",
+	"#vibe_zhugeliang_huoji": "借火成势，焚敌于顷刻。",
+	"#vibe_zhugeliang_kanpo": "虚实已明，此计可破。",
 
 	"#gz_vibe_zhaoyun:die": "一身是胆，至此无憾。",
 	"#vibe_zhaoyun_longdan": "龙胆在身，进退由我。",
@@ -22,10 +22,10 @@ export default {
 	"#gz_vibe_xurong:die": "锋刃既折，命亦随之……",
 	"#vibe_xurong_shajue": "断其手势，再行绝杀。",
 
-	"#gz_vibe_mengda:die": "立锥无地，望桑梓以何为？",
-	"#vibe_mengda_hubian1": "天下熙攘，皆为利耳。",
-	"#vibe_mengda_hubian2": "臣心不自安，乃君之过也。",
-	"#vibe_mengda_hubian3": "丞相吊民伐罪，吾自当举城来降。",
+	"#gz_vibe_mengda:die": "东风谬掌花权柄,却忌孤高不主张。",
+	"#vibe_mengda_hubian1": "臣心不自安，乃君之过也。",
+	"#vibe_mengda_hubian2": "丞相吊民伐罪，吾自当举城来降。",
+	"#vibe_mengda_hubian3": "立锥无地，望桑梓以何为？",
 	"#vibe_mengda_chenzhong1": "贡白纶帽一颜，以示微意。",
 	"#vibe_mengda_chenzhong2": "玉玦者，已决；织成者，言谋已成；苏合香者，言事已合。",
 	"#vibe_mengda_liangfan1": "若大军遂进，足下失据而还，窃相为危之。",
@@ -33,4 +33,21 @@ export default {
 	"#vibe_mengda_qiuan1": "既生七尺之躯，安能终老于阡陌，苟得于衣食？",
 	"#vibe_mengda_qiuan2": "广纳百川，方为瀚海。",
 	"#vibe_mengda_qiuan3": "锥处囊中，颖脱而出。",
+
+	"#gz_vibe_caocao:die": "宁教我负天下人，休教天下人负我。",
+	"#vibe_caocao_huibian1": "顺我者昌，逆我者亡。",
+	"#vibe_caocao_huibian2": "吾好梦中杀人。",
+
+	"#gz_vibe_simayi:die": "鹰视狼顾，终归尘土。",
+	"#vibe_simayi_guicai1": "此局，尽在吾掌。",
+	"#vibe_simayi_guicai2": "天命岂能如此轻易？",
+	"#vibe_simayi_lianpo1": "乘胜追击，方为上策。",
+
+	"#gz_vibe_liubei:die": "勿以恶小而为之，勿以善小而不为。",
+	"#vibe_liubei_rende1": "与人为善，天下归仁。",
+	"#vibe_liubei_rende2": "以德服人，万民归附。",
+
+	"#gz_vibe_guanyu:die": "玉可碎而不改其白，竹可焚而不毁其节。",
+	"#vibe_guanyu_weilin1": "过五关斩六将，何惧区区！",
+	"#vibe_guanyu_weilin2": "汉寿亭侯，当仁不让！",
 };

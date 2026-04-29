@@ -5,6 +5,7 @@ import rest from "./rest.js";
 
 export default {
 	yexinjia_mark: "野心家",
+	yexin_mark: "暴露野心",
 
 	bumingzhi: "不明置",
 	mingzhizhujiang: "明置主将",

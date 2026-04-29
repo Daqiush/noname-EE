@@ -12,6 +12,86 @@ lib.skill["_gze_newchar_disabled_cleanup"] = {
 	},
 };
 
+// 鏖战模式下，木牛流马存储的桃（position "s"）无法被 mod.cardname 重命名为杀/闪。
+// 原因：引擎 get.name 只对 position "h" 的牌应用 cardname mod，不处理 glows 牌（position "s"）。
+// 修复：在鏖战模式激活时，对 position "s" 的桃牌也应用 cardname mod。
+const _origGetName = get.name.bind(get);
+get.name = function (card, player) {
+	if (
+		_status._aozhan &&
+		get.itemtype(card) === "card" &&
+		card.name === "tao" &&
+		get.position(card) === "s" &&
+		player !== false
+	) {
+		const owner = get.itemtype(player) === "player" ? player : get.owner(card);
+		if (owner) {
+			return game.checkMod(card, owner, card.name, "cardname", owner);
+		}
+	}
+	return _origGetName(card, player);
+};
+
+if (lib.skill.aozhan) {
+	lib.skill.aozhan.onChooseToUse = function (event) {
+		if (!event.position || event.position === "h") {
+			event.position = "hs";
+		}
+	};
+	lib.skill.aozhan.onChooseToRespond = function (event) {
+		if (!event.position || event.position === "h") {
+			event.position = "hs";
+		}
+	};
+}
+
+// 野心家击杀非友方角色时，若尚未"全局暴露野心"，执行奖惩前须选择：
+//   1. 暴露野心（全局暴露，对所有势力记录 + 获得野心家标记）
+//   2. 本次奖惩改按非野心家击杀执行
+lib.skill["_gze_ye_kill_choice"] = {
+	charlotte: true,
+	trigger: {
+		global: "die",
+	},
+	filter(event, player) {
+		if (player !== event.source) return false;
+		if (event.reserveOut) return false;
+		if (!player.isYe || !player.isYe()) return false;
+		if (player._globalYexin) return false;
+		const dead = event.player;
+		if (!dead || dead === player) return false;
+		if (dead.identity === "unknown") return false;
+		if (player.getStorage("yexinjia_friend").includes(dead)) return false;
+		if (dead.getStorage("yexinjia_friend").includes(player)) return false;
+		if (player.hasCommonIdentity && player.hasCommonIdentity(dead)) return false;
+		return true;
+	},
+	forced: true,
+	direct: true,
+	priority: 15,
+	async content(event, trigger, player) {
+		const dead = trigger.player;
+		const choice = await player
+			.chooseControl(["暴露野心", "按普通击杀执行"])
+			.set("prompt", "野心家击杀奖惩前选择")
+			.set(
+				"prompt2",
+				`${get.translation(dead)}已死亡，请选择：<br/><b>暴露野心</b>：全局暴露野心并按野心家奖惩计算<br/><b>按普通击杀执行</b>：本次奖惩改按非野心家计算`
+			)
+			.set("ai", () => "按普通击杀执行")
+			.forResultControl();
+		if (choice === "暴露野心") {
+			if (typeof player.globalExposeYexin === "function") {
+				player.globalExposeYexin();
+			}
+			player.$fullscreenpop("暴露野心", "thunder");
+			game.log(player, "全局暴露了野心");
+		} else {
+			player._yeRewardSkip = true;
+		}
+	},
+};
+
 // 注册到 game 对象，使其在联机 eval 上下文中可访问
 game.isValidCharacterPair = function (name1, name2) {
 	if (_status.separatism) return true;

@@ -471,7 +471,7 @@
 			]
 		},
 		{
-			"patternId": "damage_after_change_main_draw_on_faction_change",
+			"patternId": "damage_after_change_main_draw_on_Group_change",
 			"intent": "受到伤害后变更主将，若势力因此改变则摸X张牌（X为此前同势力角色数）",
 			"keywords": ["受到伤害后", "变更主将", "势力改变", "摸X张牌", "相同势力角色数", "damageEnd", "changeMain", "identity"],
 			"descriptionPatterns": [
@@ -498,7 +498,7 @@
 			"intent": "使用杀时清空目标，由所有其他友方角色依次秘密投票，票数最多的成为目标",
 			"keywords": ["使用杀", "目标", "投票", "友方角色", "秘密选择", "票数最多", "useCardBegin", "chooseTarget", "voteIdx"],
 			"descriptionPatterns": [
-				"蜀势力技，锁定技，你使用【杀】的目标改为由所有其他友方角色投票决定。"
+				"蜀势力技，锁定技，你使用【杀】的目标改为由所有其他友方角色投票指定（须合法）。"
 			],
 			"referenceSkills": [
 				{
@@ -516,6 +516,26 @@
 				"投票循环：event.voters 数组 + event.voteIdx 计数器 + event.goto(1) 循环回step1。",
 				"voter的 chooseTarget filter 内用 trigger.player.canUse(trigger.card, target) 校验合法目标。",
 				"票数统计：countMap[t.playerid] 计票，取 maxCount 后筛出 winners，写入 trigger.targets.addArray(winners)。"
+			]
+		},
+		{
+			"patternId": "mingzhi_skill_passive_distance_or_status",
+			"intent": "明置技——暗置时效果对自身生效，首次消费超额效果时强制明置武将牌",
+			"keywords": [
+				"明置技", "showing", "showing: true", "暗置时生效", "强制明置",
+				"计算到其他角色的距离时", "距离-1", "距离修正", "自动明置", "首次消费"
+			],
+			"descriptionPatterns": [
+				"明置技，你计算到其他角色的距离时-1。",
+				"明置技，[状态效果描述]。（暗置时效果对自身生效，首次消费时强制明置）"
+			],
+			"referenceSkills": [],
+			"implementationHints": [
+				"明置技是 guozhan_ee 独有机制，用 showing: true 标记，同时须写 locked: true。",
+				"实现前必须检索 patch/content.js 和 patch/player.js 确认底层已支持 showing 属性；若不存在则停止并告知用户需先扩展底层。",
+				"效果对持有者自身始终生效（含暗置）；强制明置仅在第一次令效果产生超额收益时触发。",
+				"双武将均持有明置技时：需 1 个效果才能覆盖 → 玩家自选 1 个明置；需 2 个才能覆盖 → 两个都明置，玩家选顺序。",
+				"顺手牵羊基础距离限制为 1（不受攻击范围影响，受距离计算技能影响）；距离-1 明置技让顺手牵羊可覆盖距离 2 目标。"
 			]
 		},
 		{

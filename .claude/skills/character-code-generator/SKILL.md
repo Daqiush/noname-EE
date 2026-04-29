@@ -164,23 +164,65 @@ skill_id_info: "技能描述文本",
 
 ```javascript
 skill_id: {
-    audio: number,
+    audio: 3,  // 该技能共 N 条台词
+    logAudio: index => (typeof index === "number" ? "skill_id" + index + ".mp3" : false),
+    // 返回 false 时默认不播放；在 content 中主动调用 logSkill 并传入编号才播放
     trigger: { player: "event" },
     filter(event, player) {
         // 过滤条件
     },
-    check(event, player) {
-        // 检查条件
+    async content(event, trigger, player) {
+        // 播放第 N 条台词：
+        player.logSkill("skill_id", null, null, null, [N]);
     },
-    // 其他技能实现逻辑
 },
 ```
 
-### 技能台词格式
+**`audio` / `logAudio` 说明**：
+- `audio: N` 声明台词总数，对应 N 个音频文件和 N 条 voices 字幕条目
+- index 从 1 开始
+
+**是否需要 `logAudio` 取决于台词文本的标注方式**：
+
+① **普通台词**（无括号标注，技能发动时随机播放）→ **不写 `logAudio`**：
+```
+台词：1.若大军遂进，足下失据而还，窃相为危之。2.陛下大军金鼓以震……
+```
+
+② **有分阶段标注的台词**（部分台词在特定时机触发）→ **写 `logAudio`**：
+```
+台词：1.（发动）既生七尺之躯……2.（发动后，变更主将前）广纳百川……3.（交换主副将）锥处囊中……
+```
+此时写法为：
+```javascript
+logAudio: index => (typeof index === "number" ? "skill_id" + index + ".mp3" : "skill_id" + 1 + ".mp3"),
+```
+- `index` 为数字时：播放对应编号台词（由 `logSkill(..., [N])` 触发）
+- `index` 非数字时（技能默认发动）：播放第 1 条（若有多条"发动"台词则在调用处随机抽取编号再传入）
+- 若完全没有发动时语音，非数字时返回 `false` 而非 `"skill_id1.mp3"`
+
+### 技能台词格式（voices/character/vibe.js）
+
+键名以 `#` 开头，值为字幕文字（非文件名）：
 
 ```javascript
-'character_id_skill1': ['配音文本1', '配音文本2', ...],
+// die 台词：键格式 "#gz_<characterId>:die"
+"#gz_vibe_mengda:die":   "东风谬掌花权柄,却忌孤高不主张。",
+
+// 技能台词：键格式 "#<skillKey><index>"，index 从 1 起
+"#vibe_mengda_hubian1":  "臣心不自安，乃君之过也。",
+"#vibe_mengda_hubian2":  "丞相吊民伐罪，吾自当举城来降。",
+"#vibe_mengda_hubian3":  "立锥无地，望桑梓以何为？",
 ```
+
+### 音频文件路径规则
+
+| 类型 | 路径 |
+|---|---|
+| die | `audio/die/gz_<characterId>.mp3` |
+| 技能台词 | `audio/skill/<skillKey><index>.mp3` |
+
+音频文件名必须与 `logAudio` 返回值完全一致。
 
 ## 操作步骤
 
@@ -260,8 +302,58 @@ skill_id: {
 - **`canMoveCard` 参数语义**：`player.canMoveCard()` 无参数时用于规则判断（是否允许发动）；`player.canMoveCard(true)` 的 `true` 参数仅供 AI 判断是否应该发动，不代表规则上可以发动。在技能 `filter` / `check` / 规则判断中只能用无参版本，禁止传 `true`。
 - **`chooseToCompare` 多目标拼点**：当多名角色需要"同时"与同一敌方角色拼点时，正确写法是 `enemy.chooseToCompare(competitorsArray).callback = lib.skill.skillId.callback`，由引擎原生处理多目标拼点，**禁止**用 `compareIdx` 逐一循环 `competitor.chooseToCompare(enemy)`。callback 定义在技能对象顶层，其上下文中 `event.player` 为调用方（敌人），`event.target` 为一名竞选者，`event.winner` 为赢的一方。
 - **引擎 API 新知识落盘规则**：在实现或调试过程中，若发现引擎 API 的参数语义、适用范围或潜在误用（如参数含义与直觉不符、两个相近函数的区别），应自行判断是否属于未来生成代码时容易踩坑的知识；若是，则主动将该规则添加到本文件的”执行约束”节，无需等用户提示。
+- **`get.name` 的 `mod.cardname` 作用范围**：引擎 `get.name(card, player)` 只在以下两种情况下调用 `mod.cardname`：① `player` 为 Player 对象时；② 未传 `player` 且 `get.position(card) === “h”` 时。**position “s”（即 `glows` 牌，含木牛流马存储的牌）在未显式传入 player 时，mod.cardname 不会生效**。若需要让 mod.cardname 作用于 position “s” 的牌（如鏖战模式桃→杀/闪），必须在调用 `get.name` 时传入 owner，或 monkey-patch `get.name` 额外处理 “s” 位置。
 - **`chooseCard` 强制参数禁止乱写**：`player.chooseCard` 的第二个参数若为 `true` 表示强制选择（玩家必须选），若为描述字符串则表示可选。技能描述中”你可以...”对应可选（传描述字符串），描述中无”可以”的强制效果才传 `true`。不确定时照抄同类技能模板，禁止猜测。
 - **`async cost` + `async content` 的结果读取**：`cost` 中通过 `event.result = await player.chooseCard(...).forResult()` 存储结果后，`content` 中必须用 `event.cards`（引擎在 cost 结束后自动将 `event.result.cards` 提升到 `event.cards`），严禁在 `content` 中写 `event.result.cards`（该字段在 content 阶段已被清空）。不确定写法时，必须先在仓库中检索同类 `async cost` + `async content` 模板再落地。
+
+## 明置技机制（guozhan_ee 独有）
+
+### 概念定义
+
+- **明置技**是 guozhan_ee 独有的一种特殊锁定技，用 `showing: true` 标记。
+- 它表示：该技能是一种**状态类被动效果**，即使武将处于**暗置**状态，其效果在规则层面依然**对持有者自身生效**；但当持有者真正"消费"该效果（即第一次令效果产生超额收益）时，引擎会**强制明置**对应武将牌。
+- 典型示例：`showing: true`，你计算到其他角色的距离时 -1。
+  - 武将暗置且攻击距离为 2 时：
+    - 其他角色视你的可指定距离仍为 2（不受此技影响）。
+    - 你自己可以指定距离 3 以内的角色为【杀】的目标（攻击距离 2，距离 -1 后覆盖距离 3）。
+    - 【顺手牵羊】的基础距离限制为 1（不受攻击范围影响，只受距离计算影响）；有此技能时，你可以指定距离 2 以内的角色为【顺手牵羊】目标（距离 -1 后等效距离 1）。
+    - 当你**第一次**指定本来超额的目标（如距离 3 的角色为【杀】目标、距离 2 的角色为【顺手牵羊】目标）时，持有此技能的武将**立即强制明置**。
+
+### 双武将明置规则
+
+当主副将均暗置、均未被禁止明置、且均持有明置技时：
+
+| 所需超额距离 | 明置数量 | 玩家操作 |
+|---|---|---|
+| 需 1 个武将效果即可覆盖 | 强制明置 1 个 | 玩家自选明置主将或副将 |
+| 需 2 个武将效果才能覆盖 | 强制明置 2 个 | 玩家自选先明置哪个、再明置哪个 |
+
+### 实现约束
+
+- `showing: true` 是 **guozhan_ee 新增的底层机制属性**，在标准引擎中不存在。
+- 实现含 `showing: true` 的技能前，**必须先确认底层已支持该属性**（检索 `patch/content.js` 或 `patch/player.js` 中是否有 `showing` 的处理逻辑）。
+- 若底层尚未实现，**必须先向用户说明底层缺失并征得同意**，再按"不可适配时的底层扩展"流程新增支持，禁止直接生成上层技能代码。
+- 明置技在技能定义中应同时写：
+  ```javascript
+  skill_id: {
+      showing: true,
+      locked: true,
+      // ...其余属性
+  }
+  ```
+- 明置技的效果对**持有者自身**始终生效（含暗置时）；强制明置仅在首次"消费"超额效果时触发。
+- 若技能效果不依赖攻击距离/指定目标（如纯状态加成），则明置触发时机另行根据描述确定。
+
+## 常用引擎 API 备忘
+
+### 势力相关
+
+- `lib.group` — 本局游戏所有势力的数组（如 `["wei","shu","wu","qun",...]`），**不含野心家身份**；需要枚举全部势力时用此变量，禁止用 `lib.selectGroup`（含义不同）。
+- `isYeIdentity(id)` — 判断某 identity 是否为野心家身份（`"ye"` 或 `"x_ye"` 格式）；从 `player.js` 导入。
+- `player.getIdentities()` — 返回玩家当前势力集合数组；暗置时为 `[]`，纯野心家为 `["x_ye"]`，双势力为两元素数组。
+- `player.isYe()` — 是否为野心家（`getIdentities()` 含野心家身份）。
+- `player.isUndetermined()` — 势力是否未确定：`identity === "unknown"`、势力集合长度 ≠ 1、或复合野心家身份（如 `"shu_ye"`）均返回 `true`。
+- `player.hasCommonIdentity(target)` — 两玩家势力集合是否有交集。
 
 ## 联机模式序列化约束
 
@@ -315,6 +407,26 @@ skill_id: {
   },
   ```
 - 该规则适用于所有通过 `backup` 传递运行时状态到 `content` 的场景，包括但不限于：选择的颜色、数量、目标名、牌名等。
+
+## 视为使用有目标的锦囊牌
+
+- **禁止**直接 `player.useCard({ name: "xxx", isCard: true })` 来"视为使用"一张带 `filterTarget` 的锦囊牌（如水淹七军、决斗等）。没有提供目标时，卡牌的 content 中的 `target` 为 undefined，效果无法触发。
+- **正确做法**：先用 `player.chooseTarget()` 让玩家选择合法目标（filter 逻辑与该卡牌的 `filterTarget` 保持一致），再调用：
+  ```javascript
+  player.useCard({ name: "xxx", isCard: true }, result.targets[0], false);
+  ```
+  第三参数 `false` 抑制 AI 确认弹窗，使牌直接对指定目标生效。
+- 仅对**无目标/自动全体目标**的锦囊（如桃园结义、万箭齐发等）可省略目标参数。
+- 在 step-based content 中，chooseTarget 和 useCard 必须分两步写，示例：
+  ```javascript
+  "step N";
+  player.chooseTarget(true, "选择目标", function(card, player, target) {
+      return target !== player && target.countCards("e") > 0;
+  });
+  "step N+1";
+  if (!result.bool || !result.targets.length) return;
+  player.useCard({ name: "shuiyanqijun_ee", isCard: true }, result.targets[0], false);
+  ```
 
 ## 示例
 

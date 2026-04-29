@@ -303,6 +303,12 @@ export default {
 			content: "◇你可以弃置此标记，并发动【先驱】标记或【珠联璧合】标记或【阴阳鱼】标记的效果。",
 		},
 	},
+	yexin_mark: {
+		makrtext: "野",
+		intro: {
+			content: "◇你已经暴露野心！",
+		},
+	},
 	yexinjia_friend: {
 		marktext: "盟",
 		intro: {
@@ -773,7 +779,7 @@ export default {
 		mode: ["guozhan_ee"],
 		enable: "phaseUse",
 		usable: 1,
-		prompt: "将至多三张可合纵的牌交给一名与你势力不同的角色，或未确定势力的角色，若你交给与你势力不同的角色，则你摸等量的牌",
+		prompt: "将至多三张可合纵的牌交给一名敌方角色，或未确定势力的角色之间互相交给，若你交给与明确敌方角色，则你摸等量的牌",
 		filter(event, player) {
 			return player.hasCard(function (card) {
 				return card.hasTag("hezong") || card.hasGaintag("_hezong");
@@ -932,6 +938,8 @@ export default {
 			}
 		}
 	},
+
+
 
 	/*----分界线----*/
 	/*

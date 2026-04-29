@@ -90,7 +90,9 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 		}
 		characterList.push(character);
 	}
-	Reflect.set(_status, "characterlist", characterList.slice(0));
+	const savedList = characterList.slice(0);
+	savedList.randomSort();
+	Reflect.set(_status, "characterlist", savedList);
 	Reflect.set(_status, "yeidentity", []);
 
 	// 乱斗模式下对武将的过滤
@@ -254,14 +256,18 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 			game.players[i].node.identity.dataset.color = "unknown";
 			game.players[i].node.identity.classList.add("guessing");
 		}
-		game.players[i].hiddenSkills = lib.character[game.players[i].name1][3].slice(0);
-		var hiddenSkills2 = lib.character[game.players[i].name2][3];
-		for (var j = 0; j < hiddenSkills2.length; j++) {
-			game.players[i].hiddenSkills.add(hiddenSkills2[j]);
-		}
-		for (var j = 0; j < game.players[i].hiddenSkills.length; j++) {
-			if (!lib.skill[game.players[i].hiddenSkills[j]]) {
-				game.players[i].hiddenSkills.splice(j--, 1);
+		game.players[i].hiddenSkills = [];
+		const _allSkillsInit = [
+			...lib.character[game.players[i].name1][3],
+			...lib.character[game.players[i].name2][3],
+		];
+		for (const _sk of _allSkillsInit) {
+			if (!lib.skill[_sk]) continue;
+			if (lib.skill[_sk].showing) {
+				// 明置技：暗置时效果依然对持有者自身生效，不放入 hiddenSkills
+				game.players[i].addSkill(_sk);
+			} else {
+				game.players[i].hiddenSkills.add(_sk);
 			}
 		}
 		game.players[i].group = "unknown";
@@ -715,7 +721,9 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 	const mahjongCharacters = Object.keys(pack).filter(character => {
 		return !character.startsWith("gz_shibing") && lib.character[character]?.group === "mahjong" && !lib.config.guozhan_banned?.includes(character);
 	});
-	Reflect.set(_status, "characterlist", characterList.slice(0));
+	const savedListOL = characterList.slice(0);
+	savedListOL.randomSort();
+	Reflect.set(_status, "characterlist", savedListOL);
 	Reflect.set(_status, "yeidentity", []);
 
 	const list2 = [];
@@ -934,14 +942,18 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 					current.node.identity.dataset.color = "unknown";
 					current.node.identity.classList.add("guessing");
 				}
-				current.hiddenSkills = lib.character[current.name1][3].slice(0);
-				const hiddenSkills2 = lib.character[current.name2][3];
-				for (const skill of hiddenSkills2) {
-					current.hiddenSkills.add(skill);
-				}
-				for (let j = 0; j < current.hiddenSkills.length; j++) {
-					if (!lib.skill[current.hiddenSkills[j]]) {
-						current.hiddenSkills.splice(j--, 1);
+				current.hiddenSkills = [];
+				const _allSkillsReinit = [
+					...lib.character[current.name1][3],
+					...lib.character[current.name2][3],
+				];
+				for (const _sk of _allSkillsReinit) {
+					if (!lib.skill[_sk]) continue;
+					if (lib.skill[_sk].showing) {
+						// 明置技：暗置时效果依然对持有者自身生效，不放入 hiddenSkills
+						current.addSkill(_sk);
+					} else {
+						current.hiddenSkills.add(_sk);
 					}
 				}
 				current.group = "unknown";
@@ -1290,6 +1302,10 @@ export const hideCharacter = async (event, _trigger, player) => {
 				if (!player.skills.includes(skills[i])) {
 					continue;
 				}
+				// 明置技不随武将暗置而隐藏
+				if (lib.skill[skills[i]] && lib.skill[skills[i]].showing) {
+					continue;
+				}
 				player.hiddenSkills.add(skills[i]);
 				player.skills.remove(skills[i]);
 			}
@@ -1306,9 +1322,14 @@ export const hideCharacter = async (event, _trigger, player) => {
 			continue;
 		}
 
+		const info = get.info(skills[i]);
+		// 明置技不随武将暗置而隐藏
+		if (info.showing) {
+			continue;
+		}
+
 		player.hiddenSkills.add(skills[i]);
 
-		const info = get.info(skills[i]);
 		if (info.ondisable && info.onremove) {
 			// @ts-expect-error 祖宗之法就是这么写的
 			info.onremove(player);
@@ -1988,6 +2009,221 @@ export const isValidCharacterCombination = (mainName, viceName, playerGroup) => 
 };
 
 /**
+ * 统一的变更/招募武将底层实现。
+ *
+ * event 属性：
+ * - slot          {0|1|undefined}  0=主将，1=副将，undefined=由玩家选择
+ * - num           {number}         候选武将数量（默认：slot=0 时 1，slot=1 时 3）
+ * - optional      {boolean}        是否让玩家决定是否替换（默认 false）
+ * - noFactionChange {boolean}      候选武将不能导致势力改变（默认 false）
+ * - hidden        {boolean}        替换后是否暗置武将（默认 false）
+ *
+ * @param {GameEvent} event
+ * @param {GameEvent} _trigger
+ * @param {Player} player
+ */
+export const changeCharacterEE = async (event, _trigger, player) => {
+	// @ts-expect-error 自定义事件属性
+	const { hidden, optional, noFactionChange } = event;
+
+	// 1. 确定替换哪个位置
+	// @ts-expect-error 自定义事件属性
+	let resolvedSlot = event.slot;
+	if (resolvedSlot === undefined || resolvedSlot === null) {
+		const result = await player
+			.chooseControl("招募主将", "招募副将")
+			.set("prompt", "请选择招募的武将位置")
+			.forResult();
+		if (!result.control || result.control === "cancel2") return;
+		resolvedSlot = result.control === "招募主将" ? 0 : 1;
+	}
+
+	// 2. 主将变更前时机
+	if (resolvedSlot === 0) {
+		await event.trigger("changeBefore");
+	}
+
+	// 3. 明置该武将
+	await player.showCharacter(resolvedSlot === 0 ? 0 : 2);
+
+	// @ts-expect-error 类型就是这么写的
+	if (!_status.characterlist || _status.characterlist.length === 0) return;
+
+	let viceName = /** @type {string|undefined} */ (player.name2);
+	if (viceName?.indexOf("gz_shibing") === 0) viceName = undefined;
+
+	// 获取玩家当前势力
+	let playerGroup = player.identity;
+	if (isYeIdentity(playerGroup)) playerGroup = "ye";
+	// @ts-expect-error 类型就是这么写的
+	else if (!lib.group.includes(playerGroup)) playerGroup = lib.character[player.name1][1];
+
+	// 4. 合法性判断
+	const isValidCandidate = (candidateName) => {
+		if (candidateName.indexOf("gz_jun_") === 0) return null;
+		if (candidateName.indexOf("gz_shibing") === 0) return null;
+		if (lib.character[candidateName]?.group === "mahjong") return null;
+		if (game.hasPlayer2(c => get.nameList(c).includes(candidateName))) return null;
+
+		if (resolvedSlot === 0) {
+			if (lib.character[candidateName]?.group === "han") return null;
+			const byGroup = isValidCharacterCombination(candidateName, viceName ?? null, playerGroup);
+			const byQiuan = !noFactionChange &&
+				player.getStorage("qiuan_anyGroup").length > 0 &&
+				["wei", "shu", "wu", "qun"].includes(lib.character[candidateName].group) &&
+				!lib.character[candidateName].majorSecondGroup;
+			return (byGroup || byQiuan) ? true : false;
+		} else {
+			return isValidCharacterCombination(player.name1, candidateName) ? true : false;
+		}
+	};
+
+	// 5. 从牌堆抽取候选武将
+	const resolvedNum = event.num ?? (resolvedSlot === 0 ? 1 : 3);
+	const candidates = [];
+	// @ts-expect-error 类型就是这么写的
+	const maxAttempts = _status.characterlist.length;
+	let attempts = 0;
+
+	// @ts-expect-error 类型就是这么写的
+	while (candidates.length < resolvedNum && _status.characterlist.length > 0 && attempts < maxAttempts) {
+		attempts++;
+		// @ts-expect-error 类型就是这么写的
+		const candidateName = _status.characterlist.shift();
+		const valid = isValidCandidate(candidateName);
+		if (valid === null) {
+			game.log("#y" + get.translation(candidateName), "放回牌堆底部");
+			// @ts-expect-error 类型就是这么写的
+			_status.characterlist.push(candidateName);
+			continue;
+		}
+		if (valid) {
+			candidates.push(candidateName);
+		} else {
+			game.log("#y" + get.translation(candidateName), "不合法，放回牌堆底部");
+			// @ts-expect-error 类型就是这么写的
+			_status.characterlist.push(candidateName);
+		}
+	}
+
+	if (!candidates.length) return;
+
+	// 6. 玩家选择候选武将（只有一个时自动选择）
+	let chosen;
+	if (candidates.length === 1) {
+		chosen = candidates[0];
+	} else {
+		const result = await player
+			.chooseButton(true, ["选择要变更的武将牌", [candidates, "character"]])
+			// @ts-expect-error 类型就是这么写的
+			.set("ai", button => get.guozhanRank(button.link))
+			.forResult();
+		if (!result.bool || !result.links?.length) {
+			// @ts-expect-error 类型就是这么写的
+			for (const c of candidates) _status.characterlist.push(c);
+			return;
+		}
+		chosen = result.links[0];
+		for (const c of candidates) {
+			// @ts-expect-error 类型就是这么写的
+			if (c !== chosen) _status.characterlist.push(c);
+		}
+	}
+
+	// 7. 可选模式：询问是否替换
+	if (optional) {
+		const slot_label = resolvedSlot === 0 ? "主将" : "副将";
+		const confirm = await player
+			.chooseBool(`是否将${slot_label}替换为${get.translation(chosen)}？`)
+			.set("ai", () => true)
+			.forResult();
+		if (!confirm.bool) {
+			// @ts-expect-error 类型就是这么写的
+			_status.characterlist.push(chosen);
+			return;
+		}
+	}
+
+	// 8. 执行替换
+	const oldName = resolvedSlot === 0 ? player.name1 : player.name2;
+	const hasOld = oldName && oldName.indexOf("gz_shibing") !== 0;
+
+	if (hasOld) {
+		// @ts-expect-error 类型就是这么写的
+		_status.characterlist.add(oldName);
+		event.trigger("removeCharacterBefore");
+	}
+
+	if (hidden) {
+		game.log(player, `替换了${resolvedSlot === 0 ? "主将" : "副将"}`, "#g" + get.translation(oldName));
+	} else {
+		game.log(player, `将${resolvedSlot === 0 ? "主将" : "副将"}从`, "#g" + get.translation(oldName), "变更为", "#g" + get.translation(chosen));
+	}
+
+	if (resolvedSlot === 1) {
+		// @ts-expect-error 类型就是这么写的
+		player.viceChanged = true;
+	}
+
+	// 替换前记录新武将技能，替换后暂时屏蔽
+	const newSkills = lib.character[chosen]?.skills ?? [];
+	if (newSkills.length) {
+		if (!player.storage.newCharSkillsDisabled) {
+			player.storage.newCharSkillsDisabled = new Set();
+		}
+		for (const s of newSkills) {
+			player.storage.newCharSkillsDisabled.add(s);
+		}
+		if (!player.tempSkills?.["_gze_newchar_disabled_cleanup"]) {
+			let rootEvent = event;
+			while (rootEvent.parent) rootEvent = rootEvent.parent;
+			const capturedRoot = rootEvent;
+			player.addTempSkill("_gze_newchar_disabled_cleanup", evt => {
+				let e = evt;
+				while (e) {
+					if (e === capturedRoot) return false;
+					e = e.parent;
+				}
+				return true;
+			});
+		}
+	}
+
+	await player.reinitCharacter(oldName, chosen, false);
+
+	if (hidden) {
+		if (!player.isUnseen(resolvedSlot)) {
+			await player.hideCharacter(resolvedSlot, false);
+		}
+	} else {
+		if (typeof player.recalculateIdentity === "function") {
+			await player.recalculateIdentity();
+		}
+	}
+
+	// 9. 主将变更后时机
+	if (resolvedSlot === 0) {
+		await event.trigger("changeMainAfter");
+	}
+};
+
+/**
+ * 招募武将：玩家选择主/副将位置，明置后从牌堆抽取不导致势力改变的合法武将，
+ * 再决定是否替换。
+ *
+ * @param {GameEvent} event
+ * @param {GameEvent} _trigger
+ * @param {Player} player
+ */
+export const recruitCharacter = async (event, _trigger, player) => {
+	event.slot = undefined;
+	event.num = event.num ?? 1;
+	event.optional = true;
+	event.noFactionChange = true;
+	await changeCharacterEE(event, _trigger, player);
+};
+
+/**
  * 变更主将
  * @param {GameEvent} event
  * @param {GameEvent} _trigger
@@ -2065,8 +2301,8 @@ export const changeMain = async (event, _trigger, player) => {
 			continue;
 		}
 		
-		// 检查是否可作为合法主将（qiuan_anyFaction 为 true 时跳过势力限制）
-		if (isValidCharacterCombination(candidateName, viceName, playerGroup) || (player.getStorage("qiuan_anyFaction").length && ["wei", "shu", "wu", "qun"].includes(lib.character[candidateName].group) && !lib.character[candidateName].majorSecondGroup)) {
+		// 检查是否可作为合法主将（qiuan_anyGroup 为 true 时跳过势力限制）
+		if (isValidCharacterCombination(candidateName, viceName, playerGroup) || (player.getStorage("qiuan_anyGroup").length && ["wei", "shu", "wu", "qun"].includes(lib.character[candidateName].group) && !lib.character[candidateName].majorSecondGroup)) {
 			newMainName = candidateName;
 			break;
 		}
@@ -2187,6 +2423,8 @@ export default {
 	hideCharacter,
 	replaceCharacter,
 	isValidCharacterCombination,
+	changeCharacterEE,
+	recruitCharacter,
 	changeMain,
 	chooseJunlingFor,
 	chooseJunlingControl,

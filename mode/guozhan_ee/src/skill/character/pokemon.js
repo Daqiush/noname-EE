@@ -18,7 +18,7 @@ export default {
 		subSkill: {
 			show: {
 				trigger: { player: "showCharacterAfter" },
-				direct: true,
+				forced: true,
 				filter(event, player) {
 					if (!event.toShow || !event.toShow.length) {
 						return false;
@@ -27,7 +27,7 @@ export default {
 				},
 				content() {
 					if (typeof player.changeMain == "function") {
-						// player.changeMain(false);
+						player.changeMain(false);
 					}
 				},
 			},
@@ -75,8 +75,8 @@ export default {
 					if (event.maxHp) {
 						list.push("摸1张牌");
 					}
-					if (event.maxHand && player.canMoveCard()) {
-						list.push("移动场上一张牌");
+					if (event.maxHand) {
+						list.push("随机使用一张装备");
 					}
 					if (event.maxEquip) {
 						list.push("本回合手牌上限+2");
@@ -93,11 +93,27 @@ export default {
 					}
 					if (result.control == "摸1张牌") {
 						player.draw();
-					} else if (result.control == "移动场上一张牌") {
-						player.moveCard(game.filterPlayer(true));
+					} else if (result.control == "随机使用一张装备") {
+						const allEquips = [];
+						for (const pile of ["cardPile", "discardPile"]) {
+							for (const card of ui[pile].childNodes) {
+								if (get.type(card) === "equip") {
+									allEquips.push(card);
+								}
+							}
+						}
+						if (allEquips.length) {
+							event.targetEquip = allEquips[Math.floor(Math.random() * allEquips.length)];
+							player.gain([event.targetEquip], "gain2");
+						}
 					} else if (result.control == "本回合手牌上限+2") {
+						player.chat("待发：本回合手牌上限+2");
 						player.addTempSkill("pokemon_daifa_handlimit", { global: "phaseAfter" });
-					} 
+					}
+				"step 2";
+					if (event.targetEquip && player.hasCard(event.targetEquip, "h")) {
+						player.chooseUseTarget(event.targetEquip, true, "nopopup");
+					}
 				},
 			},
 			handlimit: {

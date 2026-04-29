@@ -7,7 +7,7 @@ export default {
 		hp: 3,
 		maxHp: 3,
 		hujia: 0,
-		skills: ["vibe_zgl_huoji", "vibe_zgl_kanpo", "vibe_zgl_bazhen"],
+		skills: ["vibe_zhugeliang_huoji", "vibe_zhugeliang_kanpo", "vibe_zhugeliang_bazhen"],
 		hasSkinInGuozhan: true,
 	}),
 	gz_vibe_zhaoyun: new Character({
@@ -65,6 +65,42 @@ export default {
 		skills: ["vibe_mengda_hubian", "vibe_mengda_chenzhong", "vibe_mengda_liangfan", "vibe_mengda_qiuan"],
 		hasSkinInGuozhan: true,
 	}),
+	gz_vibe_caocao: new Character({
+		sex: "male",
+		group: "wei",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["vibe_caocao_huibian"],
+		hasSkinInGuozhan: true,
+	}),
+	gz_vibe_simayi: new Character({
+		sex: "male",
+		group: "wei",
+		hp: 3,
+		maxHp: 3,
+		hujia: 0,
+		skills: ["vibe_simayi_guicai", "vibe_simayi_langgu", "vibe_simayi_lianpo"],
+		hasSkinInGuozhan: true,
+	}),
+	gz_vibe_liubei: new Character({
+		sex: "male",
+		group: "shu",
+		hp: 4,
+		maxHp: 4,
+		hujia: 0,
+		skills: ["vibe_liubei_rende"],
+		hasSkinInGuozhan: true,
+	}),
+	gz_vibe_guanyu: new Character({
+		sex: "male",
+		group: "shu",
+		hp: 5,
+		maxHp: 5,
+		hujia: 0,
+		skills: ["vibe_guanyu_wusheng", "vibe_guanyu_weilin"],
+		hasSkinInGuozhan: true,
+	}),
 };
 
 export const intro = {
@@ -75,6 +111,10 @@ export const intro = {
 	gz_vibe_zhuhuan: "擅长伤害后再分配牌差的吴将，可在同势力间实施压制或补牌，强化团队节奏。",
 	gz_vibe_xurong: "以定点破手与决斗压制为核心的群将，对无手牌目标具有更高的斩杀威胁。",
 	gz_vibe_mengda: "身处蜀魏之间的机变之将，受伤后可随时变更主将借势获牌，蜀势力下以众将投票决定杀的目标，魏势力下令友方投票择敌后拼点奇袭，野心家势力下可暴露野心搭配任意主将并灵活换位。",
+	gz_vibe_caocao: "身兼施恩与招募的魏势力主帅，受伤后可借伤害牌拉拢非当前回合角色，或直接令同势力友军招募，灵活游走于恩威之间。",
+	gz_vibe_simayi: "阴鸷深算的魏势力智将，可跨花色干涉判定、反摄友军手牌，并凭斩获连续额外回合，越杀越强。",
+	gz_vibe_liubei: "以仁义凝聚人心的蜀势力主帅，通过分发手牌积攒仁望以备不时之需，牌分越多越能促成友军招募，以德服人。",
+	gz_vibe_guanyu: "武勇兼备的蜀将，武圣令红色牌皆可化杀，威临明置后令♦杀无距离之限，♥杀破敌防具，并可战吼视为使用水淹七军。",
 };
 
 export const sort = "guozhan_ee_vibe";

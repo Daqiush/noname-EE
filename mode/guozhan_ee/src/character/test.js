@@ -42,7 +42,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["vibe_mashu"],
 	}),
 	gz_daqiush5: new Character({
 		sex: "male",
@@ -50,7 +50,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["vibe_mashu"],
 	}),
 	gz_daqiush6: new Character({
 		sex: "male",
@@ -58,7 +58,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["vibe_mashu"],
 	}),
 	gz_daqiush7: new Character({
 		sex: "male",
@@ -66,7 +66,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["vibe_mashu"],
 	}),
 	gz_daqiush8: new Character({
 		sex: "male",
@@ -74,7 +74,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["vibe_mashu"],
 	}),
 	gz_daqiush9: new Character({
 		sex: "male",
@@ -82,7 +82,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["vibe_mashu"],
 	}),
 	gz_daqiush10: new Character({
 		sex: "male",
@@ -90,7 +90,7 @@ export default {
 		hp: 4,
 		maxHp: 4,
 		hujia: 0,
-		skills: [],
+		skills: ["vibe_mashu"],
 	}),
 	gz_daqiush11: new Character({
 		sex: "male",

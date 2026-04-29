@@ -1144,20 +1144,32 @@ game.import("card", function () {
 				charlotte: true,
 				group: "undist",
 				init(player) {
-					if (player.isIn()) {
-						game.broadcastAll(function (player) {
-							player.classList.add("out");
-						}, player);
-						game.log(player, "移出了游戏");
-					}
+					// @ts-ignore
+					game.broadcastAll(function (player) {
+						player.style.opacity = "0.3";
+					}, player);
 				},
 				onremove(player) {
-					if (player.isOut()) {
-						game.broadcastAll(function (player) {
-							player.classList.remove("out");
-						}, player);
-						game.log(player, "移回了游戏");
-					}
+					// @ts-ignore
+					game.broadcastAll(function (player) {
+						player.style.opacity = "";
+					}, player);
+				},
+				mod: {
+					cardEnabled(card, player) {
+						return false;
+					},
+					targetEnabled(card, player, target) {
+						return false;
+					},
+				},
+				trigger: {
+					player: ["damageBegin1", "loseHpBegin", "recoverBegin"],
+				},
+				forced: true,
+				popup: false,
+				content() {
+					trigger.cancel();
 				},
 			},
 			huxinjing_ee: {
@@ -1295,7 +1307,7 @@ game.import("card", function () {
 			chiling_ee: "敕令",
 			chiling_ee_info: "①出牌阶段，对所有未确定势力的角色使用。目标角色选择一项：1、明置一张武将牌，然后摸一张牌；2、弃置一张装备牌；3、失去1点体力。②当【敕令】因判定或弃置而置入弃牌堆时，系统将之移出游戏并将【诏书】置于牌堆底，然后系统于当前回合结束后视为对所有没有势力的角色使用【敕令】。",
 			diaohulishan_ee: "调虎离山",
-			diaohulishan_ee_info: "出牌阶段，对至多两名其他角色使用。目标角色于此回合：不能使用牌、不是牌的合法目标、体力值不会变化、不计入距离或座次的结算。",
+			diaohulishan_ee_info: "出牌阶段，对至多两名其他角色使用。目标角色于此回合：不能使用牌、不是牌的合法目标、体力值不会变化、不计入距离或座次的结算。若仅选择一名目标角色，则你摸一张牌。",
 			huoshaolianying_ee: "火烧连营",
 			huoshaolianying_ee_bg: "烧",
 			huoshaolianying_ee_info_guozhan_ee: "出牌阶段，若你的下家不在/在队列中，对其/其所在所有队列中的所有角色使用。你对目标角色造成1点火属性伤害。",

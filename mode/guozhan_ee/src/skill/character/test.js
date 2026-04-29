@@ -344,7 +344,7 @@ export default {
 			battlecry:{
 				skillAnimation: true,
 				animationColor: "thunder",
-				trigger: {player: "showCharacterEnd"},
+				trigger: {player: "showCharacterAfter"},
 				forced: true,
 				filter(event, player) {
 					return event.toShow.some(name => {
