@@ -2743,13 +2743,17 @@ export class Click {
 		ui.click.charactercard(player.name2, null, null, true, this, player.skin.name2 || player.name2);
 	}
 	connectroom(e) {
+		console.log("[connectroom] clicked", {dragged:_status.dragged, clicked:_status.clicked, intro:!!ui.intro, roomfull:this.roomfull, roomgaming:this.roomgaming, roomempty:this.roomempty, version:this.version, versionOL:lib.versionOL, enteringroom:_status.enteringroom, wsOK:!!game.ws, key:this.key});
 		if (_status.dragged) {
+			console.log("[connectroom] blocked: dragged");
 			return;
 		}
 		if (_status.clicked) {
+			console.log("[connectroom] blocked: clicked");
 			return;
 		}
 		if (ui.intro) {
+			console.log("[connectroom] blocked: ui.intro");
 			return;
 		}
 		if (this.roomfull) {
@@ -2768,9 +2772,12 @@ export class Click {
 			}
 		} else {
 			if (!_status.enteringroom) {
+				console.log("[connectroom] sending enter, key=", this.key);
 				_status.enteringroom = true;
 				_status.enteringroomserver = this.serving;
 				game.send("server", "enter", this.key, get.connectNickname(), lib.config.connect_avatar);
+			} else {
+				console.log("[connectroom] blocked: enteringroom already true");
 			}
 		}
 	}

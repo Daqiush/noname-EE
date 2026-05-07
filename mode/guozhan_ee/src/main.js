@@ -116,6 +116,7 @@ export const start = async (event, trigger, player) => {
 						lib.translate[character] = lib.translate[character.slice(3)];
 					}
 				}
+
 				const shenInGuozhan = _status.connectMode ? lib.configOL.shenInGuozhan : get.config("shenInGuozhan");
 				for (const character in lib.character) {
 					if (shenInGuozhan && lib.selectGroup.includes(lib.character[character][1])) {
@@ -479,6 +480,39 @@ export const startBefore = () => {
 			lib.character[character].group = lib.character[character].groupInGuozhan || "qun";
 		}
 	}
+
+	// 暗置武将的 showing 技能对其他玩家的 tooltip 不可见
+	// showing 技能在暗置时通过 addSkill 加入 player.skills，会出现在 nodeintro 的技能列表中
+	const _origNodeintro = get.nodeintro.bind(get);
+	get.nodeintro = function (node, simple, evt, uiintro) {
+		let tempRemoved = null;
+		if (node?.classList?.contains?.("player") && node !== game.me) {
+			const expandWithGroups = names => {
+				const result = [...names];
+				for (const parent of names) {
+					const grp = lib.skill[parent]?.group;
+					if (grp) result.push(...(Array.isArray(grp) ? grp : [grp]));
+				}
+				return result;
+			};
+			const name1All = expandWithGroups(lib.character[node.name1]?.[3] ?? []);
+			const name2All = expandWithGroups(lib.character[node.name2]?.[3] ?? []);
+			const toHide = node.skills.filter(sk => {
+				if (!lib.skill[sk]?.showing) return false;
+				return (name1All.includes(sk) && node.isUnseen(0)) ||
+					(name2All.includes(sk) && node.isUnseen(1));
+			});
+			if (toHide.length) {
+				tempRemoved = toHide;
+				for (const sk of toHide) node.skills.remove(sk);
+			}
+		}
+		const result = _origNodeintro(node, simple, evt, uiintro);
+		if (tempRemoved?.length) {
+			for (const sk of tempRemoved) node.skills.add(sk);
+		}
+		return result;
+	};
 }
 
 export const onreinit = () => {

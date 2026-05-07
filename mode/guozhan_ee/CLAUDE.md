@@ -122,6 +122,25 @@ export default {
 
 `cost` 中存入 `event.result`，`content` 中必须读 `event.cards`（引擎自动提升），**禁止**在 `content` 中读 `event.result.cards`（该字段在 content 阶段已被清空）。
 
+### 触发类技能必须加 `preHidden: true`
+
+每个有 `trigger` 的技能，首层必须加：
+
+```javascript
+preHidden: true,
+```
+
+### `forced` 与 `locked` 的区别
+
+| 属性 | 含义 |
+|------|------|
+| `forced: true` | 触发时不弹"是否发动"提示，强制执行（但技能名前**不显示锁定图标**） |
+| `locked: true` | 技能名前显示锁定技图标（通常与 `forced: true` 同用） |
+
+**两者组合**：
+- `forced: true` + `locked: true` → 锁定技：强制触发 + 显示锁定图标
+- `forced: true` + `locked: false`（或省略 locked）→ 强制触发但**不显示锁定图标**（适合阵法技、子技能等不应被标注为锁定技的强制效果）
+
 ---
 
 ## 音频 / 台词规则
@@ -189,6 +208,16 @@ skill_id: {
 
 实现前必须确认 `patch/content.js` 或 `patch/player.js` 中已有 `showing` 属性处理逻辑；若底层缺失，必须先告知用户并征得同意再扩展。
 
+**子技能明置技约束**：`patch/content.js` 的 `showing` 检查只遍历角色直属技能列表（`lib.character[name][3]`）。若明置技是某父技能的 **group 子技能**（如 `vibe_guanyu_weilin_diamond`），父技能不在直属列表里被检查到，子技能的 `showing: true` 对初始化循环完全不可见，暗置时技能不会生效。底层已在初始化和重置两处循环中补充了对 group 子技能的 `showing` 检查，新增此类子技能无需额外处理。
+
+---
+
+## 阵法技（`zhenfa`）
+
+描述中含"阵法技"时，技能定义首层加 `zhenfa: "siege"`（围攻阵法）或 `zhenfa: "inline"`（队列阵法）。此属性的作用是：**授予技能持有者发起阵法召唤的资格**，允许满足条件的未确定势力角色依次明置武将牌。
+
+**约束**：`zhenfa` 只应加在能**主动发起**围攻/队列的角色身上。若技能描述为"若你是围攻目标……"（被动防御效果），技能持有者本身不参与发起阵法，**禁止添加 `zhenfa` 属性**。
+
 ---
 
 ## 势力技（`groupSkill`）
@@ -200,6 +229,25 @@ groupSkill: "shu",  // 对应势力代码
 ```
 
 **双文件约束**：`playerHasGroup` 在 `src/main.js` 和 `src/patch/game.js` 中各有一份独立实现。若需修改 `groupSkill` 判定逻辑，必须**同步修改这两个文件**。
+
+---
+
+## 选择目标：禁止无依据排除自己
+
+`chooseTarget` 的 filter 中，**禁止无根据地加 `target !== player`**。仅当描述明确写"其他角色"/"除你外"时才排除自己。
+
+典型错误（来自 `vibe_liubei_rende` 招募步骤）：
+```javascript
+// 错误：描述为"一名与你势力明确相同的角色"，未排除自己
+(card, player, target) => target !== player && target.identity === player.identity
+```
+
+```javascript
+// 正确：移除 target !== player，改用 hasCommonIdentity 防止"未知"势力误匹配
+(card, player, target) => !player.isUndetermined() && !target.isUndetermined() && player.hasCommonIdentity(target)
+```
+
+此外，`target.identity === player.identity` 会让两名势力未确定的角色（identity 均为 "unknown"）互相匹配，造成技能错误触发，**必须用 `hasCommonIdentity` + `isUndetermined` 替代**。
 
 ---
 
@@ -246,12 +294,21 @@ player.useCard({ name: "xxx", isCard: true }, result.targets[0], false);
 
 ```javascript
 lib.group                       // 本局所有势力数组，不含野心家
-player.getIdentities()          // 玩家势力集合；暗置时 []
+player.getIdentities()          // 玩家势力集合；暗置时 []，纯野心家为 ["ye"] 或 ["N_ye"]（N为座次）
 player.isYe()                   // 是否为野心家
 player.isUndetermined()         // 势力是否未确定
 player.hasCommonIdentity(target) // 两玩家势力是否有交集
 isYeIdentity(id)               // 判断 identity 是否为野心家（从 player.js 导入）
 ```
+
+**`isUndetermined()` 对野心家的判断规则**：
+- 纯野心家（`identity === "ye"` 或座次格式 `"N_ye"`）→ 返回 `false`（已确定为野心家）
+- 复合野心家（`"shu_ye"` 等）→ 返回 `true`（势力未确定）
+
+**`isRealFriendOf(target)` — "与你势力明确相同"的标准实现**：
+- `this === target`（自身）→ 始终返回 `true`（玩家永远是自己的有效招募目标，即使势力未确定）
+- 其他情况：要求双方 identity 均已确定、势力集合各恰好一个，且相等
+- "与你势力明确相同的角色"筛选器直接用 `player.isRealFriendOf(target)`，无需手写 `isUndetermined` + `hasCommonIdentity` 组合
 
 ### `enable` 的选择
 
@@ -262,6 +319,30 @@ isYeIdentity(id)               // 判断 identity 是否为野心家（从 playe
 | 两者都有 | `["chooseToUse", "chooseToRespond"]` |
 
 转化/虚拟使用类技能（`chooseToUse`），若可转化牌名不在手牌中可见，必须补 `hiddenCard(player, name)` 并显式校验资源条件。
+
+### `chooseToUse` / `chooseToRespond` 技能按钮的显示控制
+
+技能按钮是否出现由 `lib.filter.filterEnable(event, player, skill)` 决定，它依次检查：
+
+1. `info.enable` 与当前事件名匹配
+2. **`info.filter(event, player)`** ← 这是唯一能限制"何时/何种上下文出现"的入口
+3. 若有 `info.viewAs`（非函数），才检查 `info.viewAsFilter`
+
+**`viewAsFilter` 对 `chooseButton` 技能无效**：`chooseButton` 技能没有 `viewAs`，`filterEnable` 永远不会走到 `viewAsFilter` 的检查分支。错误地写 `viewAsFilter` 不会报错，但也不会生效。
+
+**正确做法：用 `filter` 限制上下文**
+
+```javascript
+// 限制"仅在自己回合内，且当前事件允许基本牌"才显示按钮
+filter(event, player) {
+    if ((/** @type {any} */(_status)).currentPhase !== player) return false;
+    const basicCards = ["sha", "tao", "shan", "jiu"];
+    return basicCards.some(name => event.filterCard?.({ name, isCard: true }, player, event));
+},
+```
+
+- 限制回合内：`_status.currentPhase !== player` → false
+- 防止在"只允许锦囊"等上下文出现：`event.filterCard` 拒绝基本牌 → false
 
 ### `canMoveCard` 参数
 
@@ -293,6 +374,17 @@ enemy.chooseToCompare(competitorsArray).callback = lib.skill.skillId.callback;
 
 `get.name(card, player)` 仅在 player 为 Player 对象，或未传 player 且 `get.position(card) === "h"` 时调用 `mod.cardname`。position `"s"`（如木牛流马存储的牌）在未显式传 player 时，`mod.cardname` 不会生效。
 
+### `enable: "phaseUse"` 的选牌 cost
+
+`cost` 仅适用于触发技（有 `trigger`）。`enable: "phaseUse"` 的等价物是 `filterCard` + `selectCard`：玩家点技能后选牌，取消则技能不发动；确认后 `event.cards` 即为所选牌，在 `content` 中读取。
+
+```javascript
+filterCard(card, player) { return get.position(card) === "h"; },
+selectCard: [1, Infinity],  // 1 张到无限张；-1 不表示"无限"，必须用 Infinity
+```
+
+`async content` 仅适用于触发技；`enable` 技的 `content` 必须用 step-based 写法，否则内部的 `chooseCard`/`chooseTarget` 子事件不会正常阻塞，技能会立即结束。
+
 ### `chooseCard` 第二参数
 
 - `true` — 强制选择（描述中无"可以"的强制效果）
@@ -308,9 +400,77 @@ enemy.chooseToCompare(competitorsArray).callback = lib.skill.skillId.callback;
 - "使用A，然后视为使用B"→ 两段式：先使用实体A，再视为使用虚拟B
 - "将A当B使用/打出"→ `viewAs + filterCard(A)` 单段转化
 
+### 触发技"视为使用一张[X]"的标准三段式写法
+
+**禁止**在 `content` 里调用 `chooseUseTarget`。正确做法是 `filterTarget` + `async cost`（含 `chooseTarget`）+ `async content`（含 `useCard` + 自定义标记 + 伤害追踪）：
+
+```javascript
+filter(event, player) {
+    return player.hasUseTarget({ name: "sha", isCard: true });
+},
+filterTarget(card, player, target) {
+    // 必须显式加 inRange：对虚拟牌 canUse 不自动校验攻击范围
+    return player.inRange(target) && player.canUse({ name: "sha", isCard: true }, target, false);
+},
+async cost(event, trigger, player) {
+    event.result = await player
+        .chooseTarget(get.prompt2(event.skill), (card, player, target) => {
+            return player.inRange(target) && player.canUse({ name: "sha", isCard: true }, target, false);
+        })
+        .set("ai", target => get.effect(target, { name: "sha" }, player, player))
+        .forResult();
+},
+async content(event, trigger, player) {
+    const target = event.targets[0];
+    const card = { name: "sha", isCard: true, mySkill: true };  // 自定义标记用于追踪
+    const next = player.useCard(card, target, false);
+    await next;
+    // 检查是否造成伤害：通过自定义标记追踪
+    const damaged = game.hasPlayer2(current => {
+        return current.hasHistory("damage", evt => evt.getParent("sha")?.card?.mySkill);
+    });
+},
+```
+
+- `filterTarget` 供 AI 参考，`cost` 内的 filter 与之保持一致（inline 复制，避免序列化引用问题）
+- 自定义标记属性（如 `shuijian: true`）挂在虚拟卡对象上，`getParent("sha")?.card` 取到使用事件的 card 即可读取
+- `ai.result` 改为 `{ target: -1 }`（对敌）或 `{ target: 1 }`（对友）
+
 ### 势力词"同势力/相同势力角色"
 
 默认包含自己。仅当描述明确写"其他角色/除你外"时才排除自己，禁止无依据添加 `event.player == player` 过滤。
+
+---
+
+## 判定后多条件效果：顺序执行 vs n选1
+
+技能描述若列出若干条件（如"若结果与此牌：颜色相同……花色相同……点数相同……"），判断方式取决于原文措辞：
+
+- **顺序执行（全部独立检查）**：原文只列出条件及对应效果，没有"选择一项"字样。若多个条件同时满足，则从前到后依次执行每项效果（各项"你可"效果分别由玩家选择是否触发）。实现方式：若干独立 `if` 语句，不使用 `if-else`。
+- **n选1（只执行一项）**：原文明确写"你可以选择一项："，后接编号列表。只能执行其中一项。实现方式：`chooseControl` 或 `chooseButton` 弹出单选框。
+
+**典型错误**：看到多个条件就用 `chooseControl` 做 n选1，但原文并无"选择一项"字样。此时应用独立 `if` 顺序执行。
+
+---
+
+## 战吼时机选择
+
+| 战吼类型 | 触发时机 | 说明 |
+|----------|----------|------|
+| 普通战吼（`战吼：`） | `showCharacterAfter` | 明置时立即触发，在 `showCharacter` 事件内同步触发 |
+| 延时战吼（`战吼（延时）：`） | `afterShowCharacter` | 等当前结算链（最近的 `useCard`/`respond`）结束后触发 |
+
+---
+
+## 技能的卡牌选择类消耗：不进弃牌堆须写 `lose: false`
+
+技能中选择卡牌时，若描述为"置于……"、"转移到……"等**不进弃牌堆**的操作，必须显式写：
+
+```javascript
+lose: false,
+```
+
+例如仁德类技能将手牌给出、将牌置于角色区域等，均属此类。不写 `lose: false` 时引擎默认牌进弃牌堆。
 
 ---
 

@@ -2,6 +2,7 @@ export default {
 	"#gz_vibe_zhugeliang:die": "天命尽矣，计难再施……",
 	"#vibe_zhugeliang_huoji": "借火成势，焚敌于顷刻。",
 	"#vibe_zhugeliang_kanpo": "虚实已明，此计可破。",
+	"#vibe_zhugeliang_bazhen1": "战群儒，守空城；今摆乱石八阵，笑谈将军死生。",
 
 	"#gz_vibe_zhaoyun:die": "一身是胆，至此无憾。",
 	"#vibe_zhaoyun_longdan": "龙胆在身，进退由我。",
@@ -34,20 +35,17 @@ export default {
 	"#vibe_mengda_qiuan2": "广纳百川，方为瀚海。",
 	"#vibe_mengda_qiuan3": "锥处囊中，颖脱而出。",
 
-	"#gz_vibe_caocao:die": "宁教我负天下人，休教天下人负我。",
-	"#vibe_caocao_huibian1": "顺我者昌，逆我者亡。",
-	"#vibe_caocao_huibian2": "吾好梦中杀人。",
+	"#gz_vibe_caocao:die": "神龟虽寿，犹有竟时。腾蛇乘雾，终为土灰……",
+	"#vibe_caocao_huibian1": "设使天下无孤，不知几人称帝，几人称王？",
+	"#vibe_caocao_huibian2": "驾六龙，乘风而行。行四海，路下之八邦。",
 
 	"#gz_vibe_simayi:die": "鹰视狼顾，终归尘土。",
-	"#vibe_simayi_guicai1": "此局，尽在吾掌。",
-	"#vibe_simayi_guicai2": "天命岂能如此轻易？",
-	"#vibe_simayi_lianpo1": "乘胜追击，方为上策。",
+	"#vibe_simayi_guicai1": "老夫，即是天命！",
+	"#vibe_simayi_lianpo1": "老夫终于等到这一天啦！",
 
 	"#gz_vibe_liubei:die": "勿以恶小而为之，勿以善小而不为。",
-	"#vibe_liubei_rende1": "与人为善，天下归仁。",
-	"#vibe_liubei_rende2": "以德服人，万民归附。",
 
-	"#gz_vibe_guanyu:die": "玉可碎而不改其白，竹可焚而不毁其节。",
-	"#vibe_guanyu_weilin1": "过五关斩六将，何惧区区！",
-	"#vibe_guanyu_weilin2": "汉寿亭侯，当仁不让！",
+	"#gz_vibe_guanyu:die": "玉可碎而不可改其白，竹可焚而不可毁其节。",
+	"#vibe_guanyu_weilin1": "可惜威风一将，将变关某刀下一鬼！",
+	"#vibe_guanyu_weilin2": "某名威震华夏，岂有难败之敌？",
 };

@@ -9,6 +9,7 @@ export default {
 		hujia: 0,
 		skills: ["vibe_zhugeliang_huoji", "vibe_zhugeliang_kanpo", "vibe_zhugeliang_bazhen"],
 		hasSkinInGuozhan: true,
+		isUnseen:true,
 	}),
 	gz_vibe_zhaoyun: new Character({
 		sex: "male",
@@ -18,6 +19,7 @@ export default {
 		hujia: 0,
 		skills: ["vibe_zhaoyun_longdan", "vibe_zhaoyun_yajiao"],
 		hasSkinInGuozhan: true,
+		isUnseen:true,
 	}),
 	gz_vibe_jiangqin: new Character({
 		sex: "male",
@@ -91,6 +93,7 @@ export default {
 		hujia: 0,
 		skills: ["vibe_liubei_rende"],
 		hasSkinInGuozhan: true,
+		isUnseen:true,
 	}),
 	gz_vibe_guanyu: new Character({
 		sex: "male",

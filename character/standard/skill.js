@@ -1293,7 +1293,7 @@ const skills = {
 				},
 			},
 			sha: {
-				audio: 2,
+				audio: 4,
 				audioname: ["re_zhaoyun"],
 				audioname2: { old_zhaoyun: "longdan_sha_re_zhaoyun" },
 				enable: ["chooseToUse", "chooseToRespond"],

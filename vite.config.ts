@@ -1,12 +1,24 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import vue from "@vitejs/plugin-vue";
 
 const port = {
-	client: 8080,
+	client: 8083,
 	server: 8089,
 };
 
-export default defineConfig({
+function injectDevServerFlag(): Plugin {
+	return {
+		name: "inject-dev-server-flag",
+		transformIndexHtml: {
+			order: "pre",
+			handler() {
+				return [{ tag: "script", children: "window.__nonameDevServer=true;", injectTo: "head-prepend" }];
+			},
+		},
+	};
+}
+
+export default defineConfig(({ command }) => ({
 	root: ".",
 	resolve: {
 		alias: {
@@ -15,7 +27,7 @@ export default defineConfig({
 		},
 		extensions: [".tsx", ".ts", ".js", ".vue"],
 	},
-	plugins: [vue()],
+	plugins: [vue(), ...(command === "serve" ? [injectDevServerFlag()] : [])],
 	server: {
 		open: true,
 		host: "127.0.0.1",
@@ -32,4 +44,4 @@ export default defineConfig({
 			"/removeDir": "http://127.0.0.1:" + port.server,
 		},
 	},
-});
+}));

@@ -26,13 +26,36 @@ export default () => {
 					game.switchMode(directstartmode);
 					return;
 				}
-				if (lib.node && window.require) {
+				if ((lib.node && window.require) || window.__nonameDevServer) {
 					ui.startServer = ui.create.system(
 						"启动服务器",
 						function (e) {
 							ui.click.shortcut(false);
 							e.stopPropagation();
-							ui.click.connectMenu();
+							if (lib.node && window.require) {
+								_status.connectMode = true;
+								ui.click.connectMenu();
+							} else {
+								var origRoomlist = lib.message.client.roomlist;
+								lib.message.client.roomlist = function (list, events, clients, wsid) {
+									var origCR = ui.create.connectRooms;
+									ui.create.connectRooms = function () {};
+									if (!ui.rooms) ui.rooms = [];
+									origRoomlist.apply(this, arguments);
+									ui.create.connectRooms = origCR;
+									lib.message.client.roomlist = origRoomlist;
+									[ui.createRoomButton, ui.connectEvents, ui.connectClients, ui.connectEventsCount, ui.connectClientsCount].forEach(function (el) {
+										if (el) el.style.display = "none";
+									});
+									if (!_status.creatingroom) {
+										_status.creatingroom = true;
+										ui.click.connectMenu();
+									}
+								};
+								game.connect("localhost", function (success) {
+									if (!success) lib.message.client.roomlist = origRoomlist;
+								});
+							}
 						},
 						true
 					);

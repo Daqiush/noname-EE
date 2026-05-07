@@ -12,6 +12,55 @@ lib.skill["_gze_newchar_disabled_cleanup"] = {
 	},
 };
 
+// afterShowCharacter 时机：收集本次结算边界内所有 showCharacter 事件，边界结束后统一触发
+lib.skill["_gze_deferred_show"] = {
+	charlotte: true,
+	onremove(player) {
+		const pending = player.storage._gze_pending_shows;
+		if (!pending?.length) return;
+		delete player.storage._gze_pending_shows;
+		const toShow = [...new Set(pending.flat())];
+		const next = game.createEvent("afterShowCharacter");
+		next.player = player;
+		next.toShow = toShow;
+		next.setContent("gzeAfterShowCharacter");
+	},
+};
+
+{
+	lib.element.content.gzeAfterShowCharacter = async function (event) {
+		await event.trigger("afterShowCharacter");
+	};
+	const _origShowCharContent = lib.element.content.showCharacter;
+	lib.element.content.showCharacter = async function (event, trigger, player) {
+		await _origShowCharContent.call(this, event, trigger, player);
+		if (get.mode() !== "guozhan_ee") return;
+		if (!event.toShow?.length) return;
+		let rootEvent = event;
+		let capturedRoot = event.parent || event;
+		while (rootEvent.parent) {
+			if (rootEvent.name === "useCard" || rootEvent.name === "respond") {
+				capturedRoot = rootEvent;
+			}
+			rootEvent = rootEvent.parent;
+		}
+		if (!player.storage._gze_pending_shows) {
+			player.storage._gze_pending_shows = [];
+		}
+		player.storage._gze_pending_shows.push(event.toShow.slice());
+		if (!player.tempSkills?.["_gze_deferred_show"]) {
+			player.addTempSkill("_gze_deferred_show", evt => {
+				let e = evt;
+				while (e) {
+					if (e === capturedRoot) return false;
+					e = e.parent;
+				}
+				return true;
+			});
+		}
+	};
+}
+
 // 鏖战模式下，木牛流马存储的桃（position "s"）无法被 mod.cardname 重命名为杀/闪。
 // 原因：引擎 get.name 只对 position "h" 的牌应用 cardname mod，不处理 glows 牌（position "s"）。
 // 修复：在鏖战模式激活时，对 position "s" 的桃牌也应用 cardname mod。
@@ -259,7 +308,6 @@ export class GameGuozhan extends Game {
 				for (var ii of group) {
 					if (map[ii] && map[ii].length) {
 						map[ii].push(choice[i]);
-						lib.character[choice[i]][1] = ii;
 						group = false;
 						break;
 					}
@@ -291,47 +339,46 @@ export class GameGuozhan extends Game {
 				}
 			}
 		}
-		for (const i in map) {
-			if (map[i].length < 2) {
-				if (map[i].length == 1) {
-					choice.remove(map[i][0]);
-					list.push(map[i][0]);
+		// Ensure at least one valid pair exists globally.
+		// Chars without a partner remain in choice (shown but may be unselectable via filterButton).
+		let hasValidPair = Object.values(map).some(v => Array.isArray(v) && v.length >= 2);
+		if (!hasValidPair) {
+			// Find the group with the most existing members to build a pair around.
+			let pairGroup = null;
+			for (const g in map) {
+				if (!Array.isArray(map[g])) continue;
+				if (!pairGroup || map[g].length > map[pairGroup].length) pairGroup = g;
+			}
+			for (let i = 0; i < list.length && !hasValidPair; ++i) {
+				const charGroup = lib.character[list[i]][1];
+				if (!charGroup || charGroup === "ye" || get.is.double(list[i])) continue;
+				if (!pairGroup) pairGroup = charGroup;
+				if (charGroup === pairGroup) {
+					choice.push(list[i]);
+					if (!Array.isArray(map[pairGroup])) map[pairGroup] = [];
+					map[pairGroup].push(list[i]);
+					list.splice(i--, 1);
+					hasValidPair = map[pairGroup].length >= 2;
 				}
-				map[i] = false;
 			}
 		}
-		if (choice.length == num - 1) {
-			for (let i = 0; i < list.length; ++i) {
-				if (map[lib.character[list[i]][1]]) {
+		// Supplement to reach num chars if some were lost during double-faction processing.
+		if (choice.length < num) {
+			for (let i = 0; i < list.length && choice.length < num; ++i) {
+				const charGroup = lib.character[list[i]][1];
+				if (Array.isArray(map[charGroup]) && map[charGroup].length >= 1) {
 					choice.push(list[i]);
+					map[charGroup].push(list[i]);
 					list.splice(i--, 1);
-					break;
 				}
 			}
-		} else if (choice.length < num - 1) {
-			let group = null;
-			for (let i = 0; i < list.length; ++i) {
-				if (group) {
-					if (lib.character[list[i]][1] == group || lib.character[list[i]][1] == "ye") {
-						choice.push(list[i]);
-						list.splice(i--, 1);
-						if (choice.length >= num) {
-							break;
-						}
-					}
-				} else {
-					if (!map[lib.character[list[i]][1]] && !get.is.double(list[i])) {
-						group = lib.character[list[i]][1];
-						if (group == "ye") {
-							group = null;
-						}
-						choice.push(list[i]);
-						list.splice(i--, 1);
-						if (choice.length >= num) {
-							break;
-						}
-					}
-				}
+			for (let i = 0; i < list.length && choice.length < num; ++i) {
+				const charGroup = lib.character[list[i]][1];
+				if (!charGroup || charGroup === "ye" || get.is.double(list[i])) continue;
+				if (!Array.isArray(map[charGroup])) map[charGroup] = [];
+				choice.push(list[i]);
+				map[charGroup].push(list[i]);
+				list.splice(i--, 1);
 			}
 		}
 		return choice.randomSort();

@@ -268,6 +268,13 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 				game.players[i].addSkill(_sk);
 			} else {
 				game.players[i].hiddenSkills.add(_sk);
+				// 父技能暗置时，其 group 子技能若带 showing，需单独保持活跃
+				const _initGroups = lib.skill[_sk].group;
+				if (_initGroups) {
+					for (const _grpSk of (Array.isArray(_initGroups) ? _initGroups : [_initGroups])) {
+						if (lib.skill[_grpSk]?.showing) game.players[i].addSkill(_grpSk);
+					}
+				}
 			}
 		}
 		game.players[i].group = "unknown";
@@ -954,6 +961,13 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 						current.addSkill(_sk);
 					} else {
 						current.hiddenSkills.add(_sk);
+						// 父技能暗置时，其 group 子技能若带 showing，需单独保持活跃
+						const _reinitGroups = lib.skill[_sk].group;
+						if (_reinitGroups) {
+							for (const _grpSk of (Array.isArray(_reinitGroups) ? _reinitGroups : [_reinitGroups])) {
+								if (lib.skill[_grpSk]?.showing) current.addSkill(_grpSk);
+							}
+						}
 					}
 				}
 				current.group = "unknown";
@@ -1542,6 +1556,28 @@ export const doubleDraw = async (_event, _trigger, player) => {
 }
 
 /**
+ * 将变更/招募得来的武将的战吼技能标记为已用（不再触发）
+ * @param {Player} player
+ * @param {string} charName
+ */
+function blockZhanhouSkills(player, charName) {
+	const topSkills = lib.character[charName]?.skills ?? [];
+	const allSkills = [...topSkills];
+	for (const s of topSkills) {
+		const grp = lib.skill[s]?.group;
+		if (grp) {
+			const arr = Array.isArray(grp) ? grp : [grp];
+			allSkills.push(...arr);
+		}
+	}
+	for (const s of allSkills) {
+		if (lib.skill[s]?.zhanhou) {
+			player.storage[s + "_used"] = true;
+		}
+	}
+}
+
+/**
  * @param {GameEvent & { hidden: boolean }} event
  * @param {GameEvent} _trigger
  * @param {Player} player
@@ -1600,12 +1636,13 @@ export const changeViceOnline = async (event, _trigger, player) => {
 	// @ts-expect-error 类型就是这么写的
 	player.viceChanged = true;
 	await player.reinitCharacter(player.name2, name, false);
+	blockZhanhouSkills(player, name);
 	if (event.hidden) {
 		if (!player.isUnseen(1)) {
 			await player.hideCharacter(1, false);
 		}
 	}
-	
+
 	// 重新计算势力
 	if (typeof player.recalculateIdentity === "function") {
 		await player.recalculateIdentity();
@@ -1623,12 +1660,10 @@ export const changeVice = [
 		
 		// 从武将牌堆顶部抽取武将，不合法的放回底部
 		event.tochange = [];
-		// @ts-expect-error 类型就是这么写的
-		const maxAttempts = _status.characterlist.length; // 防止无限循环
 		let attempts = 0;
-		
+
 		// @ts-expect-error 类型就是这么写的
-		while (event.tochange.length < event.num && _status.characterlist.length > 0 && attempts < maxAttempts) {
+		while (event.tochange.length < event.num && _status.characterlist.length > 0 && attempts < 200) {
 			attempts++;
 			// @ts-expect-error 类型就是这么写的
 			const candidateName = _status.characterlist.shift();
@@ -1722,8 +1757,13 @@ export const changeVice = [
 			}
 			if (!player.tempSkills?.["_gze_newchar_disabled_cleanup"]) {
 				let rootEvent = event;
-				while (rootEvent.parent) rootEvent = rootEvent.parent;
-				const capturedRoot = rootEvent;
+				let capturedRoot = event.parent || event;
+				while (rootEvent.parent) {
+					if (rootEvent.name === "useCard" || rootEvent.name === "respond") {
+						capturedRoot = rootEvent;
+					}
+					rootEvent = rootEvent.parent;
+				}
 				player.addTempSkill("_gze_newchar_disabled_cleanup", evt => {
 					let e = evt;
 					while (e) {
@@ -1735,6 +1775,7 @@ export const changeVice = [
 			}
 		}
 		player.reinitCharacter(player.name2, name, false);
+		blockZhanhouSkills(player, name);
 		if (event.hidden) {
 			if (!player.isUnseen(1)) {
 				player.hideCharacter(1, false);
@@ -1912,7 +1953,8 @@ export const replaceCharacter = async (event, _trigger, player) => {
 	
 	// 执行武将替换
 	await player.reinitCharacter(oldName, characterName, false);
-	
+	blockZhanhouSkills(player, characterName);
+
 	// 如果需要暗置
 	if (hidden) {
 		if (!player.isUnseen(num)) {
@@ -2034,6 +2076,7 @@ export const changeCharacterEE = async (event, _trigger, player) => {
 			.chooseControl("招募主将", "招募副将")
 			.set("prompt", "请选择招募的武将位置")
 			.forResult();
+		player.chat(result.control)
 		if (!result.control || result.control === "cancel2") return;
 		resolvedSlot = result.control === "招募主将" ? 0 : 1;
 	}
@@ -2067,7 +2110,22 @@ export const changeCharacterEE = async (event, _trigger, player) => {
 
 		if (resolvedSlot === 0) {
 			if (lib.character[candidateName]?.group === "han") return null;
-			const byGroup = isValidCharacterCombination(candidateName, viceName ?? null, playerGroup);
+			let byGroup = isValidCharacterCombination(candidateName, viceName ?? null, playerGroup);
+			if (byGroup && noFactionChange) {
+				if (playerGroup === "ye") {
+					// 野心家招募：允许当且仅当以下三者之一成立，以确保招募后仍为野心家
+					// 1. 已全局暴露野心  2. 目标势力已满员  3. 新将与旧将势力相同（不重算势力）
+					const newGroup = lib.character[candidateName]?.group;
+					const alreadyExposed = !!player._globalYexin;
+					const targetFull = !!newGroup && !player.wontYe(newGroup);
+					const sameAsOld = newGroup === lib.character[player.name1]?.group;
+					byGroup = alreadyExposed || targetFull || sameAsOld;
+				} else {
+					// 非野心家招募：汉势力/双势力副将可能放行任意主将，
+					// 需忽略副将、单独验证新主将势力与当前势力兼容
+					byGroup = isValidCharacterCombination(candidateName, null, playerGroup);
+				}
+			}
 			const byQiuan = !noFactionChange &&
 				player.getStorage("qiuan_anyGroup").length > 0 &&
 				["wei", "shu", "wu", "qun"].includes(lib.character[candidateName].group) &&
@@ -2081,8 +2139,7 @@ export const changeCharacterEE = async (event, _trigger, player) => {
 	// 5. 从牌堆抽取候选武将
 	const resolvedNum = event.num ?? (resolvedSlot === 0 ? 1 : 3);
 	const candidates = [];
-	// @ts-expect-error 类型就是这么写的
-	const maxAttempts = _status.characterlist.length;
+	const maxAttempts = 200;
 	let attempts = 0;
 
 	// @ts-expect-error 类型就是这么写的
@@ -2106,7 +2163,10 @@ export const changeCharacterEE = async (event, _trigger, player) => {
 		}
 	}
 
-	if (!candidates.length) return;
+	if (!candidates.length) {
+		console.log(`changeCharacterEE: 翻了 ${attempts} 个武将未找到合法候选，放弃本次变更`);
+		return;
+	}
 
 	// 6. 玩家选择候选武将（只有一个时自动选择）
 	let chosen;
@@ -2135,6 +2195,7 @@ export const changeCharacterEE = async (event, _trigger, player) => {
 		const slot_label = resolvedSlot === 0 ? "主将" : "副将";
 		const confirm = await player
 			.chooseBool(`是否将${slot_label}替换为${get.translation(chosen)}？`)
+			.set("createDialog", [`是否将${slot_label}替换为${get.translation(chosen)}？`, [[chosen], "character"]])
 			.set("ai", () => true)
 			.forResult();
 		if (!confirm.bool) {
@@ -2163,6 +2224,9 @@ export const changeCharacterEE = async (event, _trigger, player) => {
 	if (resolvedSlot === 1) {
 		// @ts-expect-error 类型就是这么写的
 		player.viceChanged = true;
+	} else {
+		// @ts-expect-error 类型就是这么写的
+		player.mainChanged = true;
 	}
 
 	// 替换前记录新武将技能，替换后暂时屏蔽
@@ -2176,8 +2240,13 @@ export const changeCharacterEE = async (event, _trigger, player) => {
 		}
 		if (!player.tempSkills?.["_gze_newchar_disabled_cleanup"]) {
 			let rootEvent = event;
-			while (rootEvent.parent) rootEvent = rootEvent.parent;
-			const capturedRoot = rootEvent;
+			let capturedRoot = event.parent || event;
+			while (rootEvent.parent) {
+				if (rootEvent.name === "useCard" || rootEvent.name === "respond") {
+					capturedRoot = rootEvent;
+				}
+				rootEvent = rootEvent.parent;
+			}
 			player.addTempSkill("_gze_newchar_disabled_cleanup", evt => {
 				let e = evt;
 				while (e) {
@@ -2190,13 +2259,15 @@ export const changeCharacterEE = async (event, _trigger, player) => {
 	}
 
 	await player.reinitCharacter(oldName, chosen, false);
+	blockZhanhouSkills(player, chosen);
 
 	if (hidden) {
 		if (!player.isUnseen(resolvedSlot)) {
 			await player.hideCharacter(resolvedSlot, false);
 		}
 	} else {
-		if (typeof player.recalculateIdentity === "function") {
+		// 招募（noFactionChange）且为野心家时，不重算势力
+		if (typeof player.recalculateIdentity === "function" && !(noFactionChange && player.isYe())) {
 			await player.recalculateIdentity();
 		}
 	}
@@ -2265,9 +2336,11 @@ export const changeMain = async (event, _trigger, player) => {
 	// 从武将牌堆顶部获取武将，直到找到合法的主将
 	// 不合法的武将放回牌堆底部
 	let newMainName = null;
-	
+	let changeMainAttempts = 0;
+
 	// @ts-expect-error 类型就是这么写的
-	while (_status.characterlist.length > 0) {
+	while (_status.characterlist.length > 0 && changeMainAttempts < 200) {
+		changeMainAttempts++;
 		// @ts-expect-error 类型就是这么写的
 		const candidateName = _status.characterlist.shift();
 		
@@ -2315,7 +2388,7 @@ export const changeMain = async (event, _trigger, player) => {
 	
 	// 如果没有找到合法的主将，结束
 	if (!newMainName) {
-		console.warn("changeMain: 未找到合法的主将");
+		console.log(`changeMain: 翻了 ${changeMainAttempts} 个武将未找到合法主将，放弃本次变更`);
 		return;
 	}
 	
@@ -2350,8 +2423,13 @@ export const changeMain = async (event, _trigger, player) => {
 		// 只注册一次清理 tempSkill（多次 changeMain 共用同一个根事件边界）
 		if (!player.tempSkills?.["_gze_newchar_disabled_cleanup"]) {
 			let rootEvent = event;
-			while (rootEvent.parent) rootEvent = rootEvent.parent;
-			const capturedRoot = rootEvent;
+			let capturedRoot = event.parent || event;
+			while (rootEvent.parent) {
+				if (rootEvent.name === "useCard" || rootEvent.name === "respond") {
+					capturedRoot = rootEvent;
+				}
+				rootEvent = rootEvent.parent;
+			}
 			player.addTempSkill("_gze_newchar_disabled_cleanup", evt => {
 				let e = evt;
 				while (e) {
@@ -2362,7 +2440,10 @@ export const changeMain = async (event, _trigger, player) => {
 			});
 		}
 	}
+	// @ts-expect-error 类型就是这么写的
+	player.mainChanged = true;
 	await player.reinitCharacter(oldMainName, newMainName, false);
+	blockZhanhouSkills(player, newMainName);
 
 	// 如果需要暗置
 	if (hidden) {

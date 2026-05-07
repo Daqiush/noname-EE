@@ -642,9 +642,9 @@ export class PlayerGuozhan extends Player {
 	 * @returns { boolean }
 	 */
 	isRealFriendOf(target) {
-		// 自己是自己的明确友方（当自己势力唯一时）
+		// 自己永远是自己的明确友方（用于"与你势力明确相同"可选自己的场景）
 		if (this === target) {
-			return this.getIdentities().length === 1;
+			return true;
 		}
 		
 		// 野心家建国情况：需要两边都势力唯一
@@ -742,7 +742,8 @@ export class PlayerGuozhan extends Player {
 		if (identities.length !== 1) return true;
 
 		// 复合野心家身份（如 "shu_ye"）：兼具本势力与野心家，也算未确定
-		return isYeIdentity(identities[0]) && identities[0] !== "ye";
+		// 纯野心家座次格式（如 "1_ye"）与 "ye" 同视为已确定
+		return isYeIdentity(identities[0]) && identities[0] !== "ye" && !/^\d+_ye$/.test(identities[0]);
 	}
 
 	/**

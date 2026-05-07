@@ -1,4 +1,3 @@
-import { getTypeOf } from "jszip/lib/deprecatedPublicUtils.js";
 import { lib, game, ui, get as _get, ai, _status}  from "../../../../../noname.js";
 import { cast } from "../../../../../noname/util/index.js";
 import { GetGuozhan } from "../../patch/get.js";
@@ -20,6 +19,7 @@ export default {
 	 * 因此 player.inRange 返回自然距离，借刀杀人等效果不受影响。
 	 */
 	vibe_mashu: {
+		preHidden: true,
 		showing: true,
 		locked: true,
 		mod: {
@@ -111,6 +111,7 @@ export default {
 
 	// 诸葛亮：对火攻结算，可选择修改规则
 	bazhen_bagua_ee: {
+		preHidden: true,
 		audio: "bazhen",
 		audioname: ["re_sp_zhugeliang", "ol_sp_zhugeliang", "ol_pangtong"],
 		equipSkill: true,
@@ -164,6 +165,7 @@ export default {
 	},
 	
 	vibe_zhugeliang_huoji: {
+		preHidden: true,
 		audio: 2,
 		onremove(player, skill) {
 			if (player.storage?.vibe_zhugeliang_huoji_record) {
@@ -435,6 +437,7 @@ export default {
 	},
 
 	vibe_zhugeliang_kanpo: {
+		preHidden: true,
 			audio: 2,
 			enable: ["chooseToUse", "chooseToRespond"],
 			filterCard(card) {
@@ -452,15 +455,18 @@ export default {
 		},
 
 	vibe_zhugeliang_bazhen: {
+		preHidden: true,
+		audio: 1,
 		inherit: "bazhen",
 		group: ["bazhen_bagua_ee", "vibe_zhugeliang_bazhen_gain"],
 	},
 
 	vibe_zhugeliang_bazhen_gain: {
+		zhanhou: true,
 		trigger: { player: "showCharacterAfter" },
 		direct: true,
 		filter(event, player) {
-			if (player.storage.vibe_zhugeliang_bazhen_shown_once) {
+			if (player.storage.vibe_zhugeliang_bazhen_gain_used) {
 				return false;
 			}
 			if (!event.toShow || !event.toShow.length) {
@@ -477,33 +483,40 @@ export default {
 		},
 		content() {
 			"step 0";
-			player.storage.vibe_zhugeliang_bazhen_shown_once = true;
+			player.storage.vibe_zhugeliang_bazhen_gain_used = true;
 			player.choosePlayerCard(_status.currentPhase, "he", true, "八阵：获得前回合角色的一张牌");
 			"step 1";
 			if (result.bool && result.cards && result.cards.length) {
 				player.gain(result.cards, _status.currentPhase, "giveAuto", "bySelf");
 			}
+			player.logSkill("bazhen", _status.currentPhase);
 		},
 	},
 
 	vibe_zhaoyun_longdan: {
+		audio: ["longhun1.mp3", "longhun2.mp3", "longhun3.mp3", "longhun4.mp3"],
 		inherit: "longdan",
 	},
 	vibe_zhaoyun_yajiao: {
+		preHidden: true,
+		audio: "dclonghun",
 		group: ["vibe_zhaoyun_yajiao_use", "vibe_zhaoyun_yajiao_respond"],
 		subSkill: {
         use: {
+			audio: "dclonghun",
+			direct: true,
 			trigger: { player: "useCard" },
-            direct: true,
             filter(event, player) {
 				return ["sha", "shan"].includes(event.card?.name) && !player.hasSkill("vibe_zhaoyun_yajiao_used_mark");
             },
             content() {
 				player.addTempSkill("vibe_zhaoyun_yajiao_used_mark", { global: "phaseAfter" });
                 player.draw();
+				player.logSkill("vibe_zhaoyun_yajiao");
             },
         },
         respond: {
+			audio: "dclonghun",
 			trigger: { player: "respond" },
             filter(event, player) {
 				return ["sha", "shan"].includes(event.card?.name) &&
@@ -590,6 +603,7 @@ export default {
 	},
 
 	vibe_jiangqin_jianyi: {
+		preHidden: true,
 		audio: 2,
 		enable: "chooseToUse",
 		position: "h",
@@ -734,8 +748,8 @@ export default {
 	},
 
 	vibe_bianfuren_yide: {
+		preHidden: true,
 		trigger: { global: "damageBegin4" },
-		direct: true,
 		filter(event, player) {
 			if (!event.player || !event.source || event.player == event.source) {
 				return false;
@@ -754,8 +768,9 @@ export default {
 	},
 
 	vibe_bianfuren_cijie: {
+		preHidden: true,
 		trigger: { global: "useCard2" },
-		direct: true,
+		forced: true,
 		filter(event, player) {
 			if (event.card?.name != "tao") {
 				return false;
@@ -763,7 +778,7 @@ export default {
 			if (!event.player.isFriendOf(player)) {
 				return false;
 			}
-			if (_status.currentPhase != event.player) {
+			if (_status.currentPhase != event.player) { // TODO：出牌阶段内
 				return false;
 			}
 			return game.hasPlayer(current => current.isDamaged() && !event.targets.includes(current));
@@ -788,6 +803,7 @@ export default {
 	},
 
 	vibe_bianfuren_yuejian: {
+		preHidden: true,
 		trigger: { global: "loseAfter" },
 		filter(event, player) {
 			if (player.hasSkill("vibe_bianfuren_yuejian_used")) {
@@ -815,7 +831,6 @@ export default {
 					bool: true,
 					cost_data: result,
 				};
-			console.log(result);
 			}
 			else {
 				event.result = {
@@ -825,7 +840,6 @@ export default {
 		},
 		async content(event, trigger, player) {
 			const result = event.cost_data;
-			console.log(result);
 			if (result.bool && result.links && result.links.length) {
 				await trigger.player.gain(result.links, "gain2");
 				player.addTempSkill("vibe_bianfuren_yuejian_used", { global: "phaseAfter" });
@@ -840,9 +854,10 @@ export default {
 	},
 
 	vibe_zhuhuan_jutian: {
+		preHidden: true,
 		trigger: { source: "damageEnd" },
 		filter(event, player) {
-			if (!event.player || event.player == player) {
+			if (!event.player || event.player == player || !event.player.isIn()) {
 				return false;
 			}
 			var canYazhi = !player.hasSkill("vibe_zhuhuan_jutian_yazhi") && game.hasPlayer(current => current.isFriendOf(event.player));
@@ -993,26 +1008,20 @@ export default {
 
 	// 曹操：挥鞭
 	vibe_caocao_huibian: {
+		preHidden: true,
 		audio: 2,
 		trigger: { player: "damageEnd" },
 		getIndex(event, player) { return event.num; },
-		filter(event, player) {
-			var hasDamageCard = !!event.card && game.hasPlayer(current => current !== _status.currentPhase);
-			var hasRecruitTarget = game.hasPlayer(current =>
-				current !== player && current.identity && current.identity === player.identity
-			);
-			return hasDamageCard || hasRecruitTarget;
+		filter(_event, _player) {
+			return true;
 		},
 		direct: true,
 		content() {
 			"step 0";
-			var hasDamageCard = !!trigger.card && game.hasPlayer(current => current !== _status.currentPhase);
-			var hasRecruitTarget = game.hasPlayer(current =>
-				current !== player && current.identity && current.identity === player.identity
-			);
+			var hasDamageCard = get.itemtype(trigger.cards) == "cards" && trigger.cards.filterInD().length;
 			var choices = [];
 			if (hasDamageCard) choices.push("获得伤害牌");
-			if (hasRecruitTarget) choices.push("招募");
+			choices.push("招募");
 			choices.push("cancel2");
 			player.chooseControl(choices)
 				.set("prompt", get.prompt("vibe_caocao_huibian"))
@@ -1026,7 +1035,7 @@ export default {
 				}).set("ai", target => get.attitude(_status.event.player, target));
 			} else {
 				player.chooseTarget(true, "挥鞭：选择一名与你势力明确相同的角色", function(card, player, target) {
-					return target !== player && target.identity && target.identity === player.identity;
+					return player.isRealFriendOf(target);
 				}).set("ai", target => get.attitude(_status.event.player, target));
 			}
 			"step 2";
@@ -1034,7 +1043,7 @@ export default {
 			event.targetx = result.targets[0];
 			player.logSkill("vibe_caocao_huibian", event.targetx);
 			if (event.choice === "获得伤害牌") {
-				event.targetx.gain([trigger.card]);
+				event.targetx.gain(trigger.cards);
 			} else {
 				event.targetx.recruitCharacter();
 				event.finish();
@@ -1056,13 +1065,13 @@ export default {
 
 	// 司马懿：鬼才（每回合每种花色限一次）
 	vibe_simayi_guicai: {
-		audio: 2,
+		preHidden: true,
+		audio: "jilue_guicai",
 		trigger: { global: "judge" },
 		filter(event, player) {
 			var used = player.getStorage("vibe_simayi_guicai_suits") || [];
 			return player.countCards("hes", card => !used.includes(get.suit(card))) > 0;
 		},
-		preHidden: true,
 		popup: false,
 		async cost(event, trigger, player) {
 			var used = player.getStorage("vibe_simayi_guicai_suits") || [];
@@ -1134,12 +1143,13 @@ export default {
 
 	// 司马懿：狼顾（继承refankui）
 	vibe_simayi_langgu: {
-		audio: "fankui",
+		audio: "refankui",
 		inherit: "refankui",
 	},
 
 	// 司马懿：连破（每轮限一次，每回合结束时，若本回合杀死过角色可获得额外回合）
 	vibe_simayi_lianpo: {
+		preHidden: true,
 		audio: "lianpo",
 		trigger: { global: "phaseAfter" },
 		frequent: true,
@@ -1161,6 +1171,7 @@ export default {
 
 	// 孟达：狐变
 	vibe_mengda_hubian: {
+		preHidden: true,
 		audio: 3,
 		logAudio: index => (typeof index === "number" ? "vibe_mengda_hubian" + index + ".mp3" : false),
 		trigger: { player: "damageEnd" },
@@ -1199,13 +1210,14 @@ export default {
 
 	// 孟达：陈忠
 	vibe_mengda_chenzhong: {
+		preHidden: true,
 		audio: 2,
 		groupSkill: "shu",
 		locked: true,
-		trigger: { player: "useCardBegin" },
+		trigger: { player: "useCardToPlayer" },
 		forced: true,
 		filter(event, player) {
-			return event.card && event.card.name === "sha" && game.hasPlayer(function(current) {
+			return event.card && event.card.name === "sha" && event.isFirstTarget && game.hasPlayer(function(current) {
 				return current !== player && current.isFriendOf(player);
 			});
 		},
@@ -1276,6 +1288,7 @@ export default {
 
 	// 孟达：量反
 	vibe_mengda_liangfan: {
+		preHidden: true,
 		audio: 2,
 		groupSkill: "wei",
 		locked: true,
@@ -1370,218 +1383,9 @@ export default {
 		}
 	},
 
-	// 刘备：仁德（出牌阶段限一次，将手牌分配给多名角色）
-	vibe_liubei_rende: {
-		audio: 2,
-		enable: "phaseUse",
-		usable: 1,
-		filter(event, player) {
-			return player.countCards("h") > 0;
-		},
-		content() {
-			"step 0";
-			player.chooseCard("h", [1, player.countCards("h")], "仁德：选择要分配的手牌")
-				.set("ai", card => 1 - get.value(card) / 10);
-			"step 1";
-			if (!result.bool || !result.cards || !result.cards.length) {
-				event.finish();
-				return;
-			}
-			event.rendeCards = result.cards.slice();
-			event.rendeCount = event.rendeCards.length;
-			event.cardTargets = [];
-			event.cardIdx = 0;
-			"step 2";
-			if (event.cardIdx >= event.rendeCards.length) {
-				event.goto(5);
-				return;
-			}
-			var curCard = event.rendeCards[event.cardIdx];
-			player.chooseTarget(
-				true,
-				"仁德：将" + get.translation(curCard) + "交给谁？（第" + (event.cardIdx + 1) + "/" + event.rendeCards.length + "张）",
-				function(card, player, target) { return target !== player; }
-			).set("ai", function(target) {
-				return get.attitude(_status.event.player, target);
-			});
-			"step 3";
-			if (result.bool && result.targets && result.targets.length) {
-				event.cardTargets.push({ card: event.rendeCards[event.cardIdx], target: result.targets[0] });
-			}
-			event.cardIdx++;
-			event.goto(2);
-			"step 5";
-			if (!event.cardTargets.length) {
-				event.finish();
-				return;
-			}
-			player.logSkill("vibe_liubei_rende");
-			event.giveIdx = 0;
-			"step 6";
-			if (event.giveIdx >= event.cardTargets.length) {
-				event.goto(8);
-				return;
-			}
-			event.cardTargets[event.giveIdx].target.gain([event.cardTargets[event.giveIdx].card], player, "giveAuto");
-			"step 7";
-			event.giveIdx++;
-			event.goto(6);
-			"step 8";
-			if (event.rendeCount >= 2 && !player.hasSkill("vibe_liubei_renwang")) {
-				player.addSkills("vibe_liubei_renwang");
-			}
-			var friendCount = game.filterPlayer(function(c) { return c.isFriendOf(player); }).length;
-			if (event.rendeCount <= friendCount) {
-				event.finish();
-				return;
-			}
-			player.chooseTarget(
-				"仁德：令一名与你势力明确相同的角色招募",
-				function(card, player, target) {
-					return target !== player && target.identity === player.identity;
-				}
-			).set("ai", function(target) {
-				return get.attitude(_status.event.player, target);
-			});
-			"step 9";
-			if (!result.bool || !result.targets || !result.targets.length) return;
-			result.targets[0].recruitCharacter();
-		},
-		ai: {
-			order: 9,
-			result: { player: 0.5 },
-		},
-	},
-
-	// 衍生技：仁望（回合内视为使用/打出一张基本牌，然后失去仁望）
-	vibe_liubei_renwang: {
-		enable: ["chooseToUse", "chooseToRespond"],
-		hiddenCard(player, name) {
-			if (!["sha", "tao", "shan", "jiu"].includes(name)) return false;
-			return _status.currentPhase === player;
-		},
-		viewAsFilter(player) {
-			return _status.currentPhase === player;
-		},
-		chooseButton: {
-			dialog(event, player) {
-				const list = [
-					["", "", "sha"],
-					["", "", "tao"],
-					["", "", "shan"],
-					["", "", "jiu"],
-				];
-				return ui.create.dialog("仁望", [list, "vcard"]);
-			},
-			filter(button, player) {
-				const evt = _status.event.getParent();
-				if (!evt || !["chooseToUse", "chooseToRespond"].includes(evt.name)) return false;
-				return evt.filterCard({ name: button.link[2], isCard: true }, player, evt);
-			},
-			check(button) {
-				return button.link[2] === "sha" ? 1 : 0.5;
-			},
-			backup(links, player) {
-				const choice = links[0][2];
-				return {
-					filterCard() { return false; },
-					selectCard: -1,
-					viewAs: { name: choice, isCard: true },
-					precontent() {
-						"step 0";
-						player.removeSkill("vibe_liubei_renwang");
-					},
-				};
-			},
-		},
-		ai: {
-			order: 10,
-			result: { player: 1 },
-		},
-	},
-
-	// 关羽：武圣（将红色牌转化为杀）
-	vibe_guanyu_wusheng: {
-		audio: "wusheng",
-		inherit: "new_rewusheng",
-	},
-
-	// 关羽：威临（主将技，含奥秘/战吼/明置/锁定四效果）
-	vibe_guanyu_weilin: {
-		audio: 2,
-		mainSkill: true,
-		init(player) {
-			const playerRef = cast(player);
-			if (playerRef.checkMainSkill("vibe_guanyu_weilin")) {
-				playerRef.removeMaxHp();
-			}
-		},
-		group: [
-			"vibe_guanyu_weilin_zhanhao",
-			"vibe_guanyu_weilin_diamond",
-			"vibe_guanyu_weilin_heart",
-		],
-		subSkill: {
-			// 战吼：当前结算结束后，视为使用水淹七军
-			zhanhao: {
-				trigger: { player: "showCharacterAfter" },
-				frequent: true,
-				filter(event, player) {
-					if (!event.toShow || !event.toShow.length) return false;
-					return event.toShow.some(function(name) {
-						var skills = get.character(name, 3) || [];
-						return skills.includes("vibe_guanyu_weilin");
-					});
-				},
-				content() {
-					"step 0";
-					player.chooseBool("威临·战吼：是否视为使用一张【水淹七军】？");
-					"step 1";
-					if (!result.bool) return;
-					player.chooseTarget(true, "战吼：选择【水淹七军】目标", function(card, player, target) {
-						return target !== player && target.countCards("e") > 0;
-					}).set("ai", function(target) {
-						return -get.attitude(_status.event.player, target);
-					});
-					"step 2";
-					if (!result.bool || !result.targets || !result.targets.length) return;
-					player.logSkill("vibe_guanyu_weilin");
-					player.useCard({ name: "shuiyanqijun_ee", isCard: true }, result.targets[0], false);
-				},
-			},
-			// 明置技：♦杀无距离限制
-			diamond: {
-				charlotte: true,
-				showing: true,
-				locked: true,
-				mod: {
-					targetInRange(card, player, target) {
-						if (card.name === "sha" && get.suit(card) === "diamond") return true;
-					},
-				},
-			},
-			// 锁定技：♥杀令目标防具无效
-			heart: {
-				charlotte: true,
-				locked: true,
-				trigger: { player: "useCardToPlayered" },
-				forced: true,
-				filter(event, player) {
-					return event.card && event.card.name === "sha" && get.suit(event.card) === "heart";
-				},
-				logTarget: "target",
-				content() {
-					trigger.target.addTempSkill("qinggang2");
-					if (!trigger.target.storage.qinggang2) trigger.target.storage.qinggang2 = [];
-					trigger.target.storage.qinggang2.add(trigger.card);
-					trigger.target.markSkill("qinggang2");
-				},
-			},
-		},
-	},
-
-	// 孟达：求安（限定技，待实现 changeMainBefore 底层钩子后补全）
+	// 孟达：求安（限定技）
 	vibe_mengda_qiuan: {
+		preHidden: true,
 		audio: 3,
 		logAudio: index => (typeof index === "number" ? "vibe_mengda_qiuan" + index + ".mp3" : 1),
 		groupSkill: "ye",
@@ -1676,6 +1480,238 @@ export default {
 		},
 		ai: {
 			result: { player: 1 },
+		},
+	},
+
+	// 刘备：仁德（出牌阶段限一次，将手牌分配给多名角色）
+	vibe_liubei_rende: {
+		audio: "rerende",
+		enable: "phaseUse",
+		usable: 1,
+		filter(event, player) {
+			return player.countCards("h") > 0;
+		},
+		filterCard(card, player) {
+			return get.position(card) === "h";
+		},
+		selectCard: [1, Infinity],
+		lose: false,
+		content() {
+			"step 0";
+			event.rendeCards = event.cards.slice();
+			event.rendeCount = event.rendeCards.length;
+			event.cardTargets = []; // [{target, cards}]
+			event.cardIdx = 0;
+			"step 1";
+			if (event.cardIdx >= event.rendeCards.length) {
+				event.goto(3);
+				return;
+			}
+			var curCard = event.rendeCards[event.cardIdx];
+			player.chooseTarget(
+				true,
+				"仁德：将" + get.translation(curCard) + "交给谁？（第" + (event.cardIdx + 1) + "/" + event.rendeCards.length + "张）",
+				function(card, player, target) { return target !== player; }
+			).set("ai", function(target) {
+				return get.attitude(_status.event.player, target);
+			});
+			"step 2";
+			if (result.bool && result.targets && result.targets.length) {
+				var t = result.targets[0];
+				var existing = event.cardTargets.find(function(e) { return e.target === t; });
+				if (existing) {
+					existing.cards.push(event.rendeCards[event.cardIdx]);
+				} else {
+					event.cardTargets.push({ target: t, cards: [event.rendeCards[event.cardIdx]] });
+				}
+			}
+			event.cardIdx++;
+			event.goto(1);
+			"step 3";
+			if (!event.cardTargets.length) {
+				event.finish();
+				return;
+			}
+			player.logSkill("vibe_liubei_rende");
+			event.giveIdx = 0;
+			"step 4";
+			if (event.giveIdx >= event.cardTargets.length) {
+				event.goto(6);
+				return;
+			}
+			event.cardTargets[event.giveIdx].target.gain(event.cardTargets[event.giveIdx].cards, player, "giveAuto");
+			"step 5";
+			event.giveIdx++;
+			event.goto(4);
+			"step 6";
+			if (event.rendeCount >= 2 && !player.hasSkill("vibe_liubei_renwang")) {
+				player.addSkills("vibe_liubei_renwang");
+			}
+			var friendCount = game.filterPlayer(function(c) { return c.isFriendOf(player); }).length;
+			if (event.rendeCount <= friendCount) {
+				event.finish();
+				return;
+			}
+			player.chooseTarget(
+				"仁德：令一名与你势力明确相同的角色招募",
+				function(card, player, target) {
+					return player.isRealFriendOf(target);
+				}
+			).set("ai", function(target) {
+				return get.attitude(_status.event.player, target);
+			});
+			"step 7";
+			if (!result.bool || !result.targets || !result.targets.length) return;
+			result.targets[0].recruitCharacter();
+		},
+		onremove(player, skill) {
+			player.removeSkill("vibe_liubei_renwang");
+		},
+		ai: {
+			order: 9,
+			result: { player: 0.5 },
+		},
+	},
+
+	// 衍生技：仁望（回合内视为使用/打出一张基本牌，然后失去仁望）
+	vibe_liubei_renwang: {
+		enable: ["chooseToUse", "chooseToRespond"],
+		filter(event, player) {
+			if ((/** @type {any} */(_status)).currentPhase !== player) return false;
+			const basicCards = ["sha", "tao", "shan", "jiu"];
+			return basicCards.some(name => event.filterCard?.({ name, isCard: true }, player, event));
+		},
+		hiddenCard(player, name) {
+			if (!["sha", "tao", "shan", "jiu"].includes(name)) return false;
+			return _status.currentPhase === player;
+		},
+		chooseButton: {
+			dialog(event, player) {
+				const list = [
+					["", "", "sha"],
+					["", "", "tao"],
+					["", "", "shan"],
+					["", "", "jiu"],
+				];
+				return ui.create.dialog("仁望", [list, "vcard"]);
+			},
+			filter(button, player) {
+				const evt = _status.event.getParent();
+				if (!evt || !["chooseToUse", "chooseToRespond"].includes(evt.name)) return false;
+				return evt.filterCard({ name: button.link[2], isCard: true }, player, evt);
+			},
+			check(button) {
+				return button.link[2] === "sha" ? 1 : 0.5;
+			},
+			backup(links, player) {
+				const choice = links[0][2];
+				return {
+					filterCard() { return false; },
+					selectCard: -1,
+					viewAs: { name: choice, isCard: true },
+					precontent() {
+						"step 0";
+						player.removeSkill("vibe_liubei_renwang");
+					},
+				};
+			},
+		},
+		ai: {
+			order: 10,
+			result: { player: 1 },
+		},
+	},
+
+	// 关羽：武圣（将红色牌转化为杀）
+	vibe_guanyu_wusheng: {
+		audio: "wusheng_re_guanyu",
+		inherit: "wusheng",
+	},
+
+	// 关羽：威临（主将技，含奥秘/战吼/明置/锁定四效果）
+	vibe_guanyu_weilin: {
+		audio: 2,
+		mainSkill: true,
+		init(player) {
+			const playerRef = cast(player);
+			if (playerRef.checkMainSkill("vibe_guanyu_weilin") && !playerRef.mainChanged) {
+				playerRef.removeMaxHp();
+			}
+		},
+		group: [
+			"vibe_guanyu_weilin_zhanhou",
+			"vibe_guanyu_weilin_diamond",
+			"vibe_guanyu_weilin_heart",
+		],
+		subSkill: {
+			// 战吼：当前结算结束后，视为使用水淹七军
+			zhanhou: {
+				zhanhou: true,
+				trigger: { player: "afterShowCharacter" },
+				filter(event, player) {
+					if (player.storage.vibe_guanyu_weilin_zhanhou_used) return false;
+					if (!event.toShow || !event.toShow.length) return false;
+					return event.toShow.some(function(name) {
+						var skills = get.character(name, 3) || [];
+						return skills.includes("vibe_guanyu_weilin");
+					});
+				},
+				content() {
+					"step 0";
+					player.storage.vibe_guanyu_weilin_zhanhou_used = true;
+					"step 1";
+					player.chooseTarget("战吼：选择【水淹七军】目标", function(card, player, target) {
+						return target !== player && target.countCards("e") > 0;
+					}).set("ai", function(target) {
+						return -get.attitude(_status.event.player, target);
+					});
+					"step 2";
+					if (!result.bool || !result.targets || !result.targets.length) return;
+					player.useCard({ name: "shuiyanqijun_ee", isCard: true }, result.targets[0], false);
+					player.logSkill("vibe_guanyu_weilin", result.targets[0]);
+				},
+			},
+			// 明置技：♦杀无距离限制；暗置时依然生效，首次对范围外目标使用则强制明置
+			diamond: {
+				charlotte: true,
+				showing: true,
+				locked: true,
+				mod: {
+					targetInRange(card, player, target) {
+						if (card.name === "sha" && get.suit(card) === "diamond") return true;
+					},
+				},
+				trigger: { player: "useCardBegin" },
+				forced: true,
+				filter(event, player) {
+					if (!event.card || event.card.name !== "sha" || get.suit(event.card) !== "diamond") return false;
+					
+					return event.targets?.some(target => !player.inRange(target)) ?? false;
+				},
+				async content(_event, _trigger, player) {
+					if (!player.isUnseen(0)) {
+						await player.showCharacter(0);
+					}
+					player.logSkill("vibe_guanyu_weilin", _trigger.targets.filter(target => !player.inRange(target)));
+				},
+			},
+			// 锁定技：♥杀令目标防具无效
+			heart: {
+				locked: true,
+				trigger: { player: "useCardToPlayered" },
+				forced: true,
+				filter(event, player) {
+					return event.card && event.card.name === "sha" && get.suit(event.card) === "heart";
+				},
+				logTarget: "target",
+				content() {
+					trigger.target.addTempSkill("qinggang2");
+					if (!trigger.target.storage.qinggang2) trigger.target.storage.qinggang2 = [];
+					trigger.target.storage.qinggang2.add(trigger.card);
+					trigger.target.markSkill("qinggang2");
+					player.logSkill("vibe_guanyu_weilin", trigger.target);
+				},
+			},
 		},
 	},
 };

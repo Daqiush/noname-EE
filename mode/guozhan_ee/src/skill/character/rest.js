@@ -396,84 +396,30 @@ export default {
 					}
 				}
 			}
-			let choice = 1;
-			for (let i = 0; i < player.hiddenSkills.length; i++) {
-				if (lib.skill[player.hiddenSkills[i]].ai) {
-					let mingzhi = lib.skill[player.hiddenSkills[i]].ai.mingzhi;
-					if (mingzhi == false) {
-						choice = 0;
-						break;
-					}
-					if (typeof mingzhi == "function" && mingzhi(trigger, player) == false) {
-						choice = 0;
-						break;
-					}
-				}
-			}
 			let control;
 			if (player.isUnseen()) {
-				let group = lib.character[player.name1][1];
+				// 双将均暗：总是明置副将，不主动明置主将
 				const result = await player
 					.chooseControl("bumingzhi", "明置" + get.translation(player.name1), "明置" + get.translation(player.name2), "tongshimingzhi", true)
 					.set("ai", (event, player) => {
-						if (player.hasSkillTag("mingzhi_yes")) {
-							return get.rand(1, 2);
-						}
-						if (player.hasSkillTag("mingzhi_no")) {
-							return 0;
-						}
-						// 测试：前缀为 gz_daqiush 的武将AI积极明置
-						if (player.name1 && player.name1.startsWith("gz_daqiush")) {
-							return 3; // 同时明置
-						}
-						if (player.name2 && player.name2.startsWith("gz_daqiush")) {
-							return 3; // 同时明置
-						}
-						var popu = get.population(lib.character[player.name1][1]);
-						if (popu >= 2 || (popu == 1 && game.players.length <= 4)) {
-							return Math.random() < 0.5 ? 3 : Math.random() < 0.5 ? 2 : 1;
-						}
-						if (choice == 0) {
-							return 0;
-						}
-						if (get.population(group) > 0 && player.wontYe()) {
-							return Math.random() < 0.2 ? (Math.random() < 0.5 ? 3 : Math.random() < 0.5 ? 2 : 1) : 0;
-						}
-						var nming = 0;
-						for (var i = 0; i < game.players.length; i++) {
-							if (game.players[i] != player && game.players[i].identity != "unknown") {
-								nming++;
-							}
-						}
-						if (nming == game.players.length - 1) {
-							return Math.random() < 0.5 ? (Math.random() < 0.5 ? 3 : Math.random() < 0.5 ? 2 : 1) : 0;
-						}
-						return Math.random() < (0.1 * nming) / game.players.length ? (Math.random() < 0.5 ? 3 : Math.random() < 0.5 ? 2 : 1) : 0;
+						if (player.hasSkillTag("mingzhi_no")) return 0;
+						return 2; // 明置副将
 					})
 					.forResult();
 				control = result.control;
 			} else {
-				if (Math.random() < 0.5) {
-					choice = 0;
-				}
 				if (player.isUnseen(0)) {
-					// 测试：前缀为 gz_daqiush 的武将AI积极明置
-					if (player.name1 && player.name1.startsWith("gz_daqiush")) {
-						choice = 1;
-					}
+					// 只有主将暗：不主动明置
 					const result = await player
 						.chooseControl("bumingzhi", "明置" + get.translation(player.name1), true)
-						.set("choice", choice)
+						.set("choice", 0)
 						.forResult();
 					control = result.control;
 				} else if (player.isUnseen(1)) {
-					// 测试：前缀为 gz_daqiush 的武将AI积极明置
-					if (player.name2 && player.name2.startsWith("gz_daqiush")) {
-						choice = 1;
-					}
+					// 只有副将暗：总是明置
 					const result = await player
 						.chooseControl("bumingzhi", "明置" + get.translation(player.name2), true)
-						.set("choice", choice)
+						.set("choice", 1)
 						.forResult();
 					control = result.control;
 				} else {
@@ -874,15 +820,15 @@ export default {
 		},
 		content() {
 			const skinMap = {
-				han: "gz_pokemon_yibu_zhili",
-				qun: "gz_pokemon_yibu_rixin",
-				wei: "gz_pokemon_yibu_weiyang",
-				shu: "gz_pokemon_yibu_tanwei",
-				wu: "gz_pokemon_yibu_xingjian",
-				ye: "gz_pokemon_yibu_xinya",
-				original: "gz_pokemon_yibu",
+				han: "gz_pokemon_eve_zhili",
+				qun: "gz_pokemon_eve_rixin",
+				wei: "gz_pokemon_eve_weiyang",
+				shu: "gz_pokemon_eve_tanwei",
+				wu: "gz_pokemon_eve_xingjian",
+				ye: "gz_pokemon_eve_xinya",
+				original: "gz_pokemon_eve",
 				};
-			if (player.name1 != "gz_pokemon_yibu" && player.name2 != "gz_pokemon_yibu") {
+			if (player.name1 != "gz_pokemon_eve" && player.name2 != "gz_pokemon_eve") {
 				return;
 			}
 			const groupOrder = ["han", "qun", "wei", "shu", "wu"];
@@ -899,11 +845,11 @@ export default {
 			if (!skin || player.storage.pokemon_daifa_current_skin == skin) {
 				return;
 			}
-			if (player.name1 == "gz_pokemon_yibu" && player.node.avatar) {
+			if (player.name1 == "gz_pokemon_eve" && player.node.avatar) {
 				player.node.avatar.setBackground(skin, "character");
 				player.node.avatar.show();
 			}
-			if (player.name2 == "gz_pokemon_yibu" && player.node.avatar2) {
+			if (player.name2 == "gz_pokemon_eve" && player.node.avatar2) {
 				player.node.avatar2.setBackground(skin, "character");
 				player.node.avatar2.show();
 			}
@@ -920,7 +866,7 @@ export default {
 			return false;
 		},
 		content() {
-			if (player.name1 != "gz_vibe_zhugeliang" && player.name2 != "gz_vibe_zhugeliang") {
+			if (true) {
 				return;
 			}
 			var cards = [];

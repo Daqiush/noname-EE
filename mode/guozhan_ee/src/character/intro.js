@@ -1,9 +1,10 @@
-import { intro as testIntro } from "./test.js";
 import { intro as vibeIntro } from "./vibe.js";
 import { intro as pokemonIntro } from "./pokemon.js";
 
+import { intro as testIntro } from "./test.js"; //保持test在最后
+
 export default {
-	...testIntro,
 	...vibeIntro,
 	...pokemonIntro,
+	...testIntro,
 };

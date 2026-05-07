@@ -8,7 +8,7 @@ export default {
 	vibe_zhugeliang_kanpo: "看破",
 	vibe_zhugeliang_kanpo_info: "你可以将一张黑色手牌转化为【无懈可击】。",
 	vibe_zhugeliang_bazhen: "八阵",
-	vibe_zhugeliang_bazhen_info: "<b>明置技</b>，若不为你的回合，获得前回合角色的一张牌。若你没有防具，视为装备【八卦阵】。<br>",
+	vibe_zhugeliang_bazhen_info: "<b>明置技</b>。战吼，若不为你的回合，获得前回合角色的一张牌。若你没有防具，视为装备【八卦阵】。<br>",
 
 	vibe_zhaoyun_longdan: "龙胆",
 	vibe_zhaoyun_longdan_info: "你可以将手牌区中的一张【杀】/【闪】转化为【杀/闪】。",
@@ -40,26 +40,27 @@ export default {
 	vibe_mengda_liangfan: "量反",
 	vibe_mengda_liangfan_info: "<b>魏势力技</b>，锁定技，出牌阶段开始时，你令所有其他友方角色投票选出友方角色，所有得票最多的角色同时与你选择的另一名角色拼点，赢的角色视为对没赢的角色使用一张【杀】。",
 	vibe_mengda_qiuan: "求安",
-	vibe_mengda_qiuan_info: "<b>野心家势力技</b>，限定技：你变更主将前，可永久暴露野心，若如此做：本局游戏中，此武将牌可以搭配任何势力的主将；你变更主将后可以交换主副将至下次变更前。",
+	vibe_mengda_qiuan_info: "<b>野势力技</b>，限定技：你变更主将前，可永久暴露野心，若如此做：本局游戏中，此武将牌可以搭配任何势力的主将；你变更主将后可以交换主副将至下次变更前。",
 
 	vibe_caocao_huibian: "挥鞭",
 	vibe_caocao_huibian_info: "当你受到1点伤害后，你可以选择一项：</br>1.令一名非当前回合角色获得造成此伤害的牌，然后其交给你一张手牌；</br>2.令一名势力与你明确相同的角色招募。",
+	
 	vibe_simayi_guicai: "鬼才",
 	vibe_simayi_guicai_info: "当一名角色的判定牌生效前，你可以打出一张牌代替之，每回合每种花色限一次。",
 	vibe_simayi_langgu: "狼顾",
-	vibe_simayi_langgu_info: "摸牌阶段，你可以少摸一张牌并获得当前回合角色的一张手牌。",
+	vibe_simayi_langgu_info: "当你受到1点伤害后，你可以获得来源的1张牌。",
 	vibe_simayi_lianpo: "连破",
 	vibe_simayi_lianpo_info: "每轮限一次，每回合结束时，若你本回合杀死过其他角色，你可以获得一个额外的回合。",
 
 	vibe_liubei_rende: "仁德",
-	vibe_liubei_rende_info: "出牌阶段限一次，你可以将X张手牌分别交给任意名其他角色，然后若X不小于2且你没有<b>【仁望】</b>，你获得<b>【仁望】</b>；若X大于相同势力角色数，你可令一名势力与你明确相同的角色招募。",
+	vibe_liubei_rende_info: "出牌阶段限一次，你可以将X张手牌分别交给任意名其他角色，然后：</br>若X不小于2且你没有<b>【仁望】</b>，你获得<b>【仁望】</b>；</br>若X大于相同势力角色数，你可令一名势力与你明确相同的角色招募。</br>你失去<b>【仁德】</b>时，你失去<b>【仁望】</b>。",
 	vibe_liubei_renwang: "仁望",
 	vibe_liubei_renwang_info: "当你于回合内需要使用/打出一张基本牌时，你可以视为使用/打出之，然后你失去<b>【仁望】</b>。",
 
 	vibe_guanyu_wusheng: "武圣",
 	vibe_guanyu_wusheng_info: "你可以将一张红色手牌转化为【杀】。",
 	vibe_guanyu_weilin: "威临",
-	vibe_guanyu_weilin_info: "<b>主将技</b>。奥秘技，你的体力上限-1（取一个单独阴阳鱼）。战吼，当前结算结束后，可以视为使用一张【水淹七军】。<b>明置技</b>，你使用的♦【杀】无距离限制。<b>锁定技</b>，你使用♥【杀】指定目标后，令其防具技能无效直到此【杀】结算结束。",
-	vibe_guanyu_weilin_zhanhao: "战吼",
-	vibe_guanyu_weilin_zhanhao_info: "当前结算结束后，可以视为使用一张【水淹七军】。",
+	vibe_guanyu_weilin_info: "<b>主将技</b>。奥秘技，体力上限减少1个单独的阴阳鱼。</br>战吼（延时），可以视为使用一张【水淹七军】。</br><b>明置技</b>，你使用的♦【杀】无距离限制。</br><b>锁定技</b>，你使用♥【杀】指定目标后，令其防具技能无效直到此【杀】对其结算结束。",
+	vibe_guanyu_weilin_zhanhou: "威临·战吼",
+	vibe_guanyu_weilin_zhanhou_info: "可以视为使用一张【水淹七军】。",
 };
